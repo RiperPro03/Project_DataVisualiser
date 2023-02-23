@@ -32,7 +32,7 @@ sera proposée. Les données sont fournies dans un fichier Excel.
 # Crédits
 
 Ce programme a été réalisé par des étudiants de l'**IUT informatique de Toulouse** dans le cadre d'un projet SAÉ dans notre parcours base de données.
-Voici les membres du groupe et leur GitHub :
+
 * [**Christopher Asin**](https://github.com/RiperPro03)
 * [**Baptiste Grosse**](https://github.com/BaptisteGrosse)
 * [**Henri Jezequel**](https://github.com/HenriJez)

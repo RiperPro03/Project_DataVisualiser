@@ -1,4 +1,4 @@
-streamlit==1.18.1
+streamlit==1.19.0
 pandas==1.5.3
 pymongo==4.3.3
 openpyxl==3.1.0

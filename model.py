@@ -58,21 +58,19 @@ class Essai:
 
 # Intervention
 class Intervention:
-    def __init__(self, name, description, otherName, armGroupLabels, type, idEssai):
+    def __init__(self, name, description, other_names, arm_group_labels, type):
         self.name = name
         self.description = description
-        self.otherName = otherName
-        self.armGroupLabels = armGroupLabels
+        self.other_names = other_names
+        self.arm_group_labels = arm_group_labels
         self.type = type
-        self.idEssai = idEssai
 
     def getDict(self):
         return {"name": self.name,
                 "description": self.description,
-                "otherName": self.otherName,
-                "armGroupLabels": self.armGroupLabels,
-                "type": self.type,
-                "idEssai": self.idEssai}
+                "other_names": self.other_names,
+                "armGroupLabels": self.arm_group_labels,
+                "type": self.type}
 
     def __str__(self):
         return str(self.getDict())

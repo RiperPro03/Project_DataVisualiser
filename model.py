@@ -74,3 +74,49 @@ class Intervention:
 
     def __str__(self):
         return str(self.getDict())
+
+
+class Publication:
+    def __init__(self, id, dateInserted, datePublished, doctype, doi, pmid, linkout, timesCited, altmetric, venue,
+                 publisher, title, openAccess, concept, meshTerms, observationnelles, randomise, essais):
+        self.id = id
+        self.dateInserted = dateInserted
+        self.datePublished = datePublished
+        self.doctype = doctype
+        self.doi = doi
+        self.pmid = pmid
+        self.linkout = linkout
+        self.timesCited = timesCited
+        self.altmetric = altmetric
+        self.venue = venue
+        self.publisher = publisher
+        self.title = title
+        self.openAccess = openAccess
+        self.concept = concept
+        self.meshTerms = meshTerms
+        self.observationnelles = observationnelles
+        self.randomise = randomise
+        self.essais = essais
+
+    def getDict(self):
+        return {"_id": self.id,
+                "dateInserted": self.dateInserted,
+                "datePublished": self.datePublished,
+                "doctype": self.doctype,
+                "doi": self.doi,
+                "pmid": self.pmid,
+                "linkout": self.linkout,
+                "timesCited": self.timesCited,
+                "altmetric": self.altmetric,
+                "venue": self.venue,
+                "publisher": self.publisher,
+                "title": self.title,
+                "openAccess": self.openAccess,
+                "concept": self.concept,
+                "meshTerms": self.meshTerms,
+                "observationnelles": self.observationnelles,
+                "randomise": self.randomise,
+                "essais": self.essais}
+
+    def __str__(self):
+        return str(self.getDict())

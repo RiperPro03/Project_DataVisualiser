@@ -4,6 +4,7 @@ from streamlit_option_menu import option_menu
 import json
 import plotly.express as px
 import plotly.graph_objects as go
+import requests
 
 from json import JSONDecodeError
 from model import MongoConnection, Essai, Intervention, Publication
@@ -16,7 +17,10 @@ pages = {
     "page_2": {'name': 'Statistique', 'icon': 'bi-graph-up-arrow'},
     "page_3": {'name': 'Corpus', 'icon': 'bi-card-text'},
     "page_4": {'name': 'Import', 'icon': 'cloud-upload'},
+    "page_5": {'name': 'TEST', 'icon': 'bi-tools'},
 }
+liste_noms_pages = [pages[page]['name'] for page in pages]
+liste_icons_pages = [pages[page]['icon'] for page in pages]
 
 st.set_page_config(page_title=app_name, page_icon=app_icon, layout="wide",
                    initial_sidebar_state="expanded")
@@ -93,13 +97,11 @@ def remove_duplicate_rows(df_merged, df_bd, id_column):
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
-st.sidebar.header(app_name + " " + app_icon)
+
 
 with st.sidebar:
-    selected = option_menu(None, [pages['page_1']['name'], pages['page_2']['name'], pages['page_3']['name'],
-                                  pages['page_4']['name']],
-                           icons=[pages['page_1']['icon'], pages['page_2']['icon'], pages['page_3']['icon'],
-                                  pages['page_4']['icon']],
+    selected = option_menu(None, liste_noms_pages,
+                           icons=liste_icons_pages,
                            menu_icon="cast", default_index=0)
 
 st.sidebar.markdown('''
@@ -135,6 +137,45 @@ if selected == pages['page_1']['name']:
     cont.header("Répartition des essais par registre")
     cont.plotly_chart(fig)
 
+
+# ---------- STATISTIQUE ---------
+elif selected == pages['page_2']['name']:
+    st.title(selected)
+    with st.spinner('Chargement des données en cours...'):
+        # Récupération des essais
+        df_essai = getDf_essai()
+        nb_essai = len(df_essai)
+
+        # Récupération des interventions
+        df_intervention = getDf_intervention()
+        nb_intervention = len(df_intervention)
+
+    tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
+    tab1.plotly_chart(px.histogram(df_essai, x="dateInserted", color="registry", title="Nombre d'essais par jour"))
+    tab2.dataframe(df_essai['dateInserted'].value_counts())
+
+    st.line_chart(df_essai['dateInserted'].value_counts())
+    st.area_chart(df_intervention['type'].value_counts())
+
+# ---------- TABLE ---------------
+elif selected == pages['page_3']['name']:
+    st.title(selected)
+
+    with st.spinner('Chargement des données en cours...'):
+        # Récupération des essais
+        df_essai = getDf_essai()
+        nb_essai = len(df_essai)
+
+        # Récupération des interventions
+        df_intervention = getDf_intervention()
+        nb_intervention = len(df_intervention)
+
+    st.header("Essai")
+    st.dataframe(df_essai)
+
+    st.header("Intervention")
+    st.dataframe(df_intervention)
+
 # ---------- IMPORT --------------
 elif selected == pages['page_4']['name']:
     st.title(selected)
@@ -144,41 +185,51 @@ elif selected == pages['page_4']['name']:
     if file is not None:
         with st.spinner('Traitement des données en cours...'):
             try:
+                progression_bar = st.progress(0)
+
                 # Recuperer les données excel des Essai et Publications
                 df_obs_essai = pd.read_excel(file, sheet_name='1 - ClinicalTrials_ObsStudies')
                 df_rand_essai = pd.read_excel(file, sheet_name='2 - ClinicalTrials_RandTrials')
                 df_obs_pub = pd.read_excel(file, sheet_name='3 - Publications_ObsStudies')
                 df_rand_pub = pd.read_excel(file, sheet_name='4 - Publications_RandTrials')
 
+                progression_bar.progress(10)
+
                 # Nettoyer les deux DataFrames
                 df_obs_essai = clean_dataframe(df_obs_essai)
                 df_rand_essai = clean_dataframe(df_rand_essai)
-
                 df_obs_pub = df_obs_pub.loc[df_obs_pub['id'].str.len() < 30]
                 df_rand_pub = df_rand_pub.loc[df_rand_pub['id'].str.len() < 30]
+
+                progression_bar.progress(20)
 
                 # Concaténer les deux DataFrames et supprimer les lignes en double
                 df_essai_merged = pd.concat([df_obs_essai, df_rand_essai]).drop_duplicates()
                 df_pub_merged = pd.concat([df_obs_pub, df_rand_pub]).drop_duplicates(subset=['id'], keep='first')
 
+                progression_bar.progress(30)
+
                 # transformer la colonne conditions en liste
                 df_essai_merged['conditions'] = df_essai_merged['conditions'].str.split(' • ')
-
                 df_pub_merged['openAccess'] = df_pub_merged['openAccess'].str.split(' • ')
                 df_pub_merged['concepts'] = df_pub_merged['concepts'].str.split(' • ')
                 df_pub_merged['meshTerms'] = df_pub_merged['meshTerms'].str.split(' • ')
 
+                progression_bar.progress(40)
+
                 # Recuperer la collection Essai sur MongoDB
                 df_bd_essai = pd.DataFrame(list(collection_Essai.find()))
-
                 # Recuperer la collection Publication sur MongoDB
                 df_bd_pub = pd.DataFrame(list(db['Publication'].find()))
 
-                # Supprimer les lignes en double
-                df_traiter_essai = remove_duplicate_rows(df_essai_merged, df_bd_essai, 'id')
+                progression_bar.progress(50)
 
                 # Supprimer les lignes en double
+                df_traiter_essai = remove_duplicate_rows(df_essai_merged, df_bd_essai, 'id')
+                # Supprimer les lignes en double
                 df_traiter_pub = remove_duplicate_rows(df_pub_merged, df_bd_pub, 'id')
+
+                progression_bar.progress(55)
 
                 liste_essai = []
                 # Créeation d'objet Essai puis ajouter dans la liste
@@ -204,6 +255,8 @@ elif selected == pages['page_4']['name']:
                               row['abstract'],
                               row['phase'], obs_value, rand_value, interventions_list))
 
+                progression_bar.progress(65)
+
                 liste_publication = []
                 for i, row in df_traiter_pub.iterrows():
                     # Récupérer les id des publications observatifs et randomisés
@@ -213,6 +266,17 @@ elif selected == pages['page_4']['name']:
                     # Vérifier si la publication est dans les publications observatifs et/ou randomisés
                     obs_value, rand_value = get_obs_rand_values(row['id'], obs_pub_ids, rand_pub_ids)
 
+                    # Récupérer les métadonnées de la publication
+                    doi = row['doi']
+                    url = f'https://api.crossref.org/works/{doi}'
+                    response = requests.get(url)
+
+                    if response.status_code == 200:
+                        data = json.loads(response.text)
+                        print(data)
+                    else:
+                        print('Erreur : impossible de récupérer les métadonnées de la publication')
+
                     # Ajouter l'objet Publication dans la liste
                     liste_publication.append(
                         Publication(row['id'], row['dateInserted'], row['datePublished'], ['doctype'], row['doi'],
@@ -220,11 +284,14 @@ elif selected == pages['page_4']['name']:
                                     row['publisher'], row['title'], row['openAccess'], row['concepts'],
                                     row['meshTerms'], obs_value, rand_value, 0))
 
+                progression_bar.progress(75)
+
                 # Envoi des essais à MongoDB
                 statut_essai = insert_objects_to_mongoDB(liste_essai, collection_Essai)
-
                 # Envoi des publications à MongoDB
                 statut_pub = insert_objects_to_mongoDB(liste_publication, collection_Publication)
+
+                progression_bar.progress(100)
 
             except Exception as e:
                 st.error("Une erreur est survenue lors de l'importation des données")
@@ -248,38 +315,17 @@ elif selected == pages['page_4']['name']:
             st.write("Nombre de publications importées: " + str(len(liste_publication)))
             st.write(df_traiter_pub)
 
-# ---------- STATISTIQUE ---------
-elif selected == pages['page_2']['name']:
-    st.title(selected)
-    with st.spinner('Chargement des données en cours...'):
-        # Récupération des essais
-        df_essai = getDf_essai()
-        nb_essai = len(df_essai)
-
-        # Récupération des interventions
-        df_intervention = getDf_intervention()
-        nb_intervention = len(df_intervention)
-
-    st.plotly_chart(px.histogram(df_essai, x="dateInserted", color="registry", title="Nombre d'essais par jour"))
-    st.line_chart(df_essai['dateInserted'].value_counts())
-    st.area_chart(df_intervention['type'].value_counts())
-
-
-# ---------- TABLE ---------------
-elif selected == pages['page_3']['name']:
+# ---------- TEST -----------
+elif selected == pages['page_5']['name']:
     st.title(selected)
 
-    with st.spinner('Chargement des données en cours...'):
-        # Récupération des essais
-        df_essai = getDf_essai()
-        nb_essai = len(df_essai)
+    doi = st.text_input('Entrer un DOI')
+    if doi:
+        url = f'https://api.crossref.org/works/{doi}'
+        response = requests.get(url)
 
-        # Récupération des interventions
-        df_intervention = getDf_intervention()
-        nb_intervention = len(df_intervention)
-
-    st.header("Essai")
-    st.dataframe(df_essai)
-
-    st.header("Intervention")
-    st.dataframe(df_intervention)
+        if response.status_code == 200:
+            data = json.loads(response.text)
+            st.json(data)
+        else:
+            st.error('Erreur : impossible de récupérer les métadonnées de la publication')

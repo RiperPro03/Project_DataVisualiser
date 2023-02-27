@@ -37,14 +37,17 @@ with st.spinner('Connexion à la base de données en cours...'):
 
 
 # ---------- FONCTION ----------
+@st.cache_data(show_spinner=False)
 def getDf_essai():
     return pd.DataFrame(list(collection_Essai.find({}, {'interventions': 0})))
 
 
+@st.cache_data(show_spinner=False)
 def getDf_publication():
     return pd.DataFrame(list(collection_Publication.find()))
 
 
+@st.cache_data(show_spinner=False)
 def getDf_intervention():
     interventions = collection_Essai.find({'interventions': {'$ne': None}}, {'_id': 0, 'interventions': 1})
     Liste_intervention = [Intervention(inter['name'],
@@ -98,12 +101,33 @@ with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 st.sidebar.markdown("---")
 
-
 with st.sidebar:
     selected = option_menu(None, liste_noms_pages,
                            icons=liste_icons_pages,
                            menu_icon="cast", default_index=0)
+if selected == pages['page_1']['name']:
+    st.sidebar.markdown('''---''')
+    st.sidebar.title(selected)
+    st.sidebar.markdown('''---''')
+elif selected == pages['page_2']['name']:
+    st.sidebar.markdown('''---''')
+    st.sidebar.title(selected)
+    st.sidebar.markdown('''---''')
+elif selected == pages['page_3']['name']:
+    st.sidebar.markdown('''---''')
+    st.sidebar.title(selected)
+    st.sidebar.markdown('''---''')
+elif selected == pages['page_4']['name']:
+    st.sidebar.markdown('''---''')
+    st.sidebar.title(selected)
+    st.sidebar.markdown('''---''')
+elif selected == pages['page_5']['name']:
+    st.sidebar.markdown('''---''')
+    st.sidebar.title(selected)
+    st.sidebar.markdown('''---''')
 
+if st.sidebar.button('Recharger les données'):
+    st.cache_data.clear()
 st.sidebar.markdown('''
 ---
 Created with ❤️ by [Christopher ASIN](https://github.com/RiperPro03).
@@ -226,8 +250,15 @@ elif selected == pages['page_4']['name']:
 
                 # Supprimer les lignes en double
                 df_traiter_essai = remove_duplicate_rows(df_essai_merged, df_bd_essai, 'id')
+                # DataFrame des essais à supprimer
+                if not df_bd_essai.empty:
+                    df_drop_essai = df_bd_essai[~df_bd_essai['_id'].isin(df_essai_merged['id'])]
+
                 # Supprimer les lignes en double
                 df_traiter_pub = remove_duplicate_rows(df_pub_merged, df_bd_pub, 'id')
+                # DataFrame des publications à supprimer
+                if not df_bd_pub.empty:
+                    df_drop_pub = df_bd_pub[~df_bd_pub['_id'].isin(df_pub_merged['id'])]
 
                 progression_bar.progress(55)
 
@@ -291,6 +322,18 @@ elif selected == pages['page_4']['name']:
                 # Envoi des publications à MongoDB
                 statut_pub = insert_objects_to_mongoDB(liste_publication, collection_Publication)
 
+                # Supprimer les essais et publications de MongoDB
+                if not df_drop_essai.empty:
+                    collection_Essai.delete_many({'_id': {'$in': list(df_drop_essai['_id'].values)}})
+                    st.write("Nombre d'essai qui a été supprimer de la base de données : ", len(df_drop_essai))
+                    st.dataframe(df_drop_essai)
+                    st.cache_data.clear()
+                if not df_drop_pub.empty:
+                    collection_Publication.delete_many({'_id': {'$in': list(df_drop_pub['_id'].values)}})
+                    st.write("Nombre de publication qui a été supprimer de la base de données : ", len(df_drop_pub))
+                    st.dataframe(df_drop_pub)
+                    st.cache_data.clear()
+
                 progression_bar.progress(100)
 
             except Exception as e:
@@ -306,14 +349,17 @@ elif selected == pages['page_4']['name']:
             st.write(df_traiter_essai)
             st.write("Nombre de publications importées: " + str(len(liste_publication)))
             st.write(df_traiter_pub)
+            st.cache_data.clear()
         elif statut_essai:
             st.success("Les essais ont été importés avec succès")
             st.write("Nombre d'essais importés: " + str(len(liste_essai)))
             st.write(df_traiter_essai)
+            st.cache_data.clear()
         elif statut_pub:
             st.success("Les publications ont été importées avec succès")
             st.write("Nombre de publications importées: " + str(len(liste_publication)))
             st.write(df_traiter_pub)
+            st.cache_data.clear()
 
 # ---------- TEST -----------
 elif selected == pages['page_5']['name']:

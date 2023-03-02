@@ -205,11 +205,12 @@ elif selected == pages['page_4']['name']:
     st.title(selected)
 
     file = st.file_uploader("Upload un fichier Excel", type="xlsx")
+    container = st.container()
 
     if file is not None:
         with st.spinner('Traitement des données en cours...'):
             try:
-                progression_bar = st.progress(0)
+                progression_bar = container.progress(0)
 
                 # Recuperer les données excel des Essai et Publications
                 df_obs_essai = pd.read_excel(file, sheet_name='1 - ClinicalTrials_ObsStudies')
@@ -297,17 +298,6 @@ elif selected == pages['page_4']['name']:
                     # Vérifier si la publication est dans les publications observatifs et/ou randomisés
                     obs_value, rand_value = get_obs_rand_values(row['id'], obs_pub_ids, rand_pub_ids)
 
-                    # Récupérer les métadonnées de la publication
-                    doi = row['doi']
-                    url = f'https://api.crossref.org/works/{doi}'
-                    response = requests.get(url)
-
-                    if response.status_code == 200:
-                        data = json.loads(response.text)
-                        print(data)
-                    else:
-                        print('Erreur : impossible de récupérer les métadonnées de la publication')
-
                     # Ajouter l'objet Publication dans la liste
                     liste_publication.append(
                         Publication(row['id'], row['dateInserted'], row['datePublished'], ['doctype'], row['doi'],
@@ -324,11 +314,13 @@ elif selected == pages['page_4']['name']:
 
                 # Supprimer les essais et publications de MongoDB
                 if not df_drop_essai.empty:
+                    st.info("Essai a supprimé detecté")
                     collection_Essai.delete_many({'_id': {'$in': list(df_drop_essai['_id'].values)}})
                     st.write("Nombre d'essai qui a été supprimer de la base de données : ", len(df_drop_essai))
                     st.dataframe(df_drop_essai)
                     st.cache_data.clear()
                 if not df_drop_pub.empty:
+                    st.info("Publication a supprimé detecté")
                     collection_Publication.delete_many({'_id': {'$in': list(df_drop_pub['_id'].values)}})
                     st.write("Nombre de publication qui a été supprimer de la base de données : ", len(df_drop_pub))
                     st.dataframe(df_drop_pub)
@@ -342,23 +334,23 @@ elif selected == pages['page_4']['name']:
                 st.stop()
 
         if not statut_essai and not statut_pub:
-            st.warning("Toutes les données ont déjà été importées")
+            container.warning("Toutes les données ont déjà été importées")
         elif statut_essai and statut_pub:
-            st.success("Les données ont été importées avec succès")
-            st.write("Nombre d'essais importés: " + str(len(liste_essai)))
-            st.write(df_traiter_essai)
-            st.write("Nombre de publications importées: " + str(len(liste_publication)))
-            st.write(df_traiter_pub)
+            container.success("Les données ont été importées avec succès")
+            container.write("Nombre d'essais importés: " + str(len(liste_essai)))
+            container.write(df_traiter_essai)
+            container.write("Nombre de publications importées: " + str(len(liste_publication)))
+            container.write(df_traiter_pub)
             st.cache_data.clear()
         elif statut_essai:
-            st.success("Les essais ont été importés avec succès")
-            st.write("Nombre d'essais importés: " + str(len(liste_essai)))
-            st.write(df_traiter_essai)
+            container.success("Les essais ont été importés avec succès")
+            container.write("Nombre d'essais importés: " + str(len(liste_essai)))
+            container.write(df_traiter_essai)
             st.cache_data.clear()
         elif statut_pub:
-            st.success("Les publications ont été importées avec succès")
-            st.write("Nombre de publications importées: " + str(len(liste_publication)))
-            st.write(df_traiter_pub)
+            container.success("Les publications ont été importées avec succès")
+            container.write("Nombre de publications importées: " + str(len(liste_publication)))
+            container.write(df_traiter_pub)
             st.cache_data.clear()
 
 # ---------- TEST -----------

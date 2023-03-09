@@ -59,6 +59,24 @@ def getDf_intervention():
     return pd.DataFrame(inter.getDict() for inter in Liste_intervention)
 
 
+@st.cache_data(show_spinner=False)
+def getDf_publication_Concept():
+    return pd.DataFrame(list(collection_Publication.aggregate(
+        [{"$unwind": "$concept"}, {"$group": {"_id": "$concept", "count": {"$sum": 1}}}, {"$sort": {"count": -1}},
+         {"$limit": 100}])))
+
+
+@st.cache_data(show_spinner=False)
+def getDf_essai_Conditions():
+    return pd.DataFrame(list(collection_Essai.aggregate([
+        {"$unwind": "$conditions"},
+        {"$group": {"_id": "$conditions",
+                    "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 100}
+    ])))
+
+
 def insert_objects_to_mongoDB(liste_objets, collection):
     if liste_objets:
         # Convertir la liste d'objets en liste de dictionnaires
@@ -181,7 +199,7 @@ elif selected == pages['page_2']['name']:
     st.line_chart(df_essai['dateInserted'].value_counts())
     st.area_chart(df_intervention['type'].value_counts())
 
-# ---------- TABLE ---------------
+# ---------- CORPUS ---------------
 elif selected == pages['page_3']['name']:
     st.title(selected)
 
@@ -194,11 +212,29 @@ elif selected == pages['page_3']['name']:
         df_intervention = getDf_intervention()
         nb_intervention = len(df_intervention)
 
-    st.header("Essai")
+        # Récupération des publications
+        df_pub = getDf_publication()
+        nb_pub = len(df_pub)
+
+        df_concept = getDf_publication_Concept()
+
+        df_conditions = getDf_essai_Conditions()
+
+    st.header("Essai : " + str(nb_essai))
     st.dataframe(df_essai)
 
-    st.header("Intervention")
+    st.header("Intervention : " + str(nb_intervention))
     st.dataframe(df_intervention)
+
+    st.header("Publication : " + str(nb_pub))
+    st.dataframe(df_pub)
+
+    st.write(len(df_concept))
+    st.dataframe(df_concept)
+
+    st.write(len(df_conditions))
+    st.dataframe(df_conditions)
+
 
 # ---------- IMPORT --------------
 elif selected == pages['page_4']['name']:

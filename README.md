@@ -34,10 +34,10 @@ sera proposée. Les données sont fournies dans un fichier Excel.
 Ce programme a été réalisé par des étudiants de l'**IUT informatique de Toulouse** dans le cadre d'un projet SAÉ dans notre parcours base de données.
 
 * [**Christopher Asin**](https://github.com/RiperPro03)
-* [**Baptiste Grosse**](https://github.com/BaptisteGrosse)
 * [**Henri Jezequel**](https://github.com/HenriJez)
 * [**Anthony Lozano**](https://github.com/Anthooooooo)
 * [**Carl Premi**](https://github.com/otsubyo)
+* [**Baptiste Grosse**](https://github.com/BaptisteGrosse)
 
 
 

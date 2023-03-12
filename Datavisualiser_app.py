@@ -229,10 +229,10 @@ elif selected == pages['page_3']['name']:
     st.header("Publication : " + str(nb_pub))
     st.dataframe(df_pub)
 
-    st.write(len(df_concept))
+    st.header("Top " + str(len(df_concept)) + " Concept")
     st.dataframe(df_concept)
 
-    st.write(len(df_conditions))
+    st.header("Top " + str(len(df_conditions)) + " Conditions")
     st.dataframe(df_conditions)
 
 

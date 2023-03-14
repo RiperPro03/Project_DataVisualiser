@@ -354,12 +354,14 @@ elif selected == pages['page_4']['name']:
                     # Vérifier si la publication est dans les publications observatifs et/ou randomisés
                     obs_value, rand_value = get_obs_rand_values(row['id'], obs_pub_ids, rand_pub_ids)
 
+                    liste_essai_pub = []
+
                     # Ajouter l'objet Publication dans la liste
                     liste_publication.append(
                         Publication(row['id'], row['dateInserted'], row['datePublished'], ['doctype'], row['doi'],
                                     row['pmid'], row['linkout'], row['timesCited'], row['altmetric'], row['venue'],
                                     row['publisher'], row['title'], row['openAccess'], row['concepts'],
-                                    row['meshTerms'], obs_value, rand_value, 0))
+                                    row['meshTerms'], obs_value, rand_value, liste_essai_pub))
 
                 progression_bar.progress(75)
 

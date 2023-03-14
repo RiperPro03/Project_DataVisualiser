@@ -84,6 +84,12 @@ def getDf_essai_Conditions():
         {"$limit": 100}
     ])))
 
+@st.cache_data(show_spinner=False)
+def getDf_NbPhase():
+    return pd.DataFrame(list(collection_Essai.aggregate([
+    {"$group": {"_id": "$phase", "count": {"$sum": 1}}},
+    {"$sort": {"_id": 1}}
+    ])))
 
 # insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
@@ -203,10 +209,13 @@ elif selected == pages['page_2']['name']:
         df_intervention = getDf_intervention()
         nb_intervention = len(df_intervention)
 
+        #Récuperation du nombre d'essai par phase
+        df_Phase = getDf_NbPhase()
+
     tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
     tab1.plotly_chart(px.histogram(df_essai, x="dateInserted", color="registry", title="Nombre d'essais par jour"))
     tab2.dataframe(df_essai['dateInserted'].value_counts())
-
+    tab1.plotly_chart(px.pie(df_Phase,values='count', names='_id', title='Nombre d\'essai par phase'))
     st.line_chart(df_essai['dateInserted'].value_counts())
     st.area_chart(df_intervention['type'].value_counts())
 

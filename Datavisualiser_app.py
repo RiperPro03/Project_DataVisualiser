@@ -37,16 +37,19 @@ with st.spinner('Connexion à la base de données en cours...'):
 
 
 # ---------- FONCTION ----------
+# Récupérer la dataframe essai depuis la BD
 @st.cache_data(show_spinner=False)
 def getDf_essai():
     return pd.DataFrame(list(collection_Essai.find({}, {'interventions': 0})))
 
 
+# Récupérer la dataframe publication depuis la BD
 @st.cache_data(show_spinner=False)
 def getDf_publication():
     return pd.DataFrame(list(collection_Publication.find()))
 
 
+# Récupérer la dataframe intervention depuis la BD
 @st.cache_data(show_spinner=False)
 def getDf_intervention():
     interventions = collection_Essai.find({'interventions': {'$ne': None}}, {'_id': 0, 'interventions': 1})
@@ -59,13 +62,18 @@ def getDf_intervention():
     return pd.DataFrame(inter.getDict() for inter in Liste_intervention)
 
 
+# Récupérer le top 100 des concepts les plus utilisés
 @st.cache_data(show_spinner=False)
 def getDf_publication_Concept():
     return pd.DataFrame(list(collection_Publication.aggregate(
-        [{"$unwind": "$concept"}, {"$group": {"_id": "$concept", "count": {"$sum": 1}}}, {"$sort": {"count": -1}},
+        [{"$unwind": "$concept"},
+         {"$group": {"_id": "$concept",
+                     "count": {"$sum": 1}}},
+         {"$sort": {"count": -1}},
          {"$limit": 100}])))
 
 
+# Récupérer le top 100 des conditions les plus utilisées
 @st.cache_data(show_spinner=False)
 def getDf_essai_Conditions():
     return pd.DataFrame(list(collection_Essai.aggregate([
@@ -77,6 +85,7 @@ def getDf_essai_Conditions():
     ])))
 
 
+# insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
     if liste_objets:
         # Convertir la liste d'objets en liste de dictionnaires
@@ -88,6 +97,7 @@ def insert_objects_to_mongoDB(liste_objets, collection):
         return False
 
 
+# definir si un essai est randomisé ou observationel
 def get_obs_rand_values(id, df_obs_ids, df_rand_ids):
     obs_value, rand_value = 0, 0
 
@@ -99,13 +109,14 @@ def get_obs_rand_values(id, df_obs_ids, df_rand_ids):
     return obs_value, rand_value
 
 
+# nettoyer les erreur de la dataframe essai
 def clean_dataframe(dataframe):
     dataframe = dataframe.loc[dataframe['id'].str.len() < 30]
     dataframe = dataframe.dropna(subset=['date'])
     dataframe['phase'] = dataframe['phase'].astype(str)
     return dataframe
 
-
+# retirer les doublons d'une dataframe
 def remove_duplicate_rows(df_merged, df_bd, id_column):
     if not df_bd.empty:
         df_traiter = df_merged[~df_merged[id_column].isin(df_bd['_id'])]
@@ -288,14 +299,14 @@ elif selected == pages['page_4']['name']:
                 # Supprimer les lignes en double
                 df_traiter_essai = remove_duplicate_rows(df_essai_merged, df_bd_essai, 'id')
                 # DataFrame des essais à supprimer
-                if not df_bd_essai.empty:
-                    df_drop_essai = df_bd_essai[~df_bd_essai['_id'].isin(df_essai_merged['id'])]
+                # if not df_bd_essai.empty:
+                #     df_drop_essai = df_bd_essai[~df_bd_essai['_id'].isin(df_essai_merged['id'])]
 
                 # Supprimer les lignes en double
                 df_traiter_pub = remove_duplicate_rows(df_pub_merged, df_bd_pub, 'id')
                 # DataFrame des publications à supprimer
-                if not df_bd_pub.empty:
-                    df_drop_pub = df_bd_pub[~df_bd_pub['_id'].isin(df_pub_merged['id'])]
+                # if not df_bd_pub.empty:
+                #     df_drop_pub = df_bd_pub[~df_bd_pub['_id'].isin(df_pub_merged['id'])]
 
                 progression_bar.progress(55)
 
@@ -349,18 +360,18 @@ elif selected == pages['page_4']['name']:
                 statut_pub = insert_objects_to_mongoDB(liste_publication, collection_Publication)
 
                 # Supprimer les essais et publications de MongoDB
-                if not df_drop_essai.empty:
-                    st.info("Essai a supprimé detecté")
-                    collection_Essai.delete_many({'_id': {'$in': list(df_drop_essai['_id'].values)}})
-                    st.write("Nombre d'essai qui a été supprimer de la base de données : ", len(df_drop_essai))
-                    st.dataframe(df_drop_essai)
-                    st.cache_data.clear()
-                if not df_drop_pub.empty:
-                    st.info("Publication a supprimé detecté")
-                    collection_Publication.delete_many({'_id': {'$in': list(df_drop_pub['_id'].values)}})
-                    st.write("Nombre de publication qui a été supprimer de la base de données : ", len(df_drop_pub))
-                    st.dataframe(df_drop_pub)
-                    st.cache_data.clear()
+                # if not df_drop_essai.empty:
+                #     st.info("Essai a supprimé detecté")
+                #     collection_Essai.delete_many({'_id': {'$in': list(df_drop_essai['_id'].values)}})
+                #     st.write("Nombre d'essai qui a été supprimer de la base de données : ", len(df_drop_essai))
+                #     st.dataframe(df_drop_essai)
+                #     st.cache_data.clear()
+                # if not df_drop_pub.empty:
+                #     st.info("Publication a supprimé detecté")
+                #     collection_Publication.delete_many({'_id': {'$in': list(df_drop_pub['_id'].values)}})
+                #     st.write("Nombre de publication qui a été supprimer de la base de données : ", len(df_drop_pub))
+                #     st.dataframe(df_drop_pub)
+                #     st.cache_data.clear()
 
                 progression_bar.progress(100)
 

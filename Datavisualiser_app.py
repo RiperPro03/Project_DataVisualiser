@@ -40,7 +40,9 @@ with st.spinner('Connexion à la base de données en cours...'):
 # Récupérer la dataframe essai depuis la BD
 @st.cache_data(show_spinner=False)
 def getDf_essai():
-    return pd.DataFrame(list(collection_Essai.find({}, {'interventions': 0})))
+    df = pd.DataFrame(list(collection_Essai.find({}, {'interventions': 0})))
+    df = df.rename(columns={"dateInserted": "Date d'insertion"})
+    return df
 
 
 # Récupérer la dataframe publication depuis la BD
@@ -86,10 +88,10 @@ def getDf_essai_Conditions():
 
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
-    return pd.DataFrame(list(collection_Essai.aggregate([
-    {"$group": {"_id": "$phase", "count": {"$sum": 1}}},
-    {"$sort": {"_id": 1}}
-    ])))
+    df = pd.DataFrame(list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}},{"$sort": {"_id": 1}}])))
+    df = df.rename(columns={"_id": "Phase"})
+    df = df.rename(columns={"count": "Nombre d'essai"})
+    return df
 
 # insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
@@ -213,11 +215,16 @@ elif selected == pages['page_2']['name']:
         df_Phase = getDf_NbPhase()
 
     tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
-    tab1.plotly_chart(px.histogram(df_essai, x="dateInserted", color="registry", title="Nombre d'essais par jour"))
-    tab2.dataframe(df_essai['dateInserted'].value_counts())
-    tab1.plotly_chart(px.pie(df_Phase,values='count', names='_id', title='Nombre d\'essai par phase'))
-    st.line_chart(df_essai['dateInserted'].value_counts())
-    st.area_chart(df_intervention['type'].value_counts())
+
+    tab1.plotly_chart(px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
+    tab1.plotly_chart(px.pie(df_Phase,values='Nombre d\'essai', names='Phase', title='Nombre d\'essai par phase'))
+    tab1.area_chart(df_intervention['type'].value_counts())
+    tab2.write("Nombre d'essai par date d'insertion")
+    tab2.dataframe(df_essai['Date d\'insertion'].value_counts())
+    tab2.write("Nombre d'essai par Phase")
+    tab2.dataframe(df_Phase)
+    tab2.write("Nombre d'intervention Par type")
+    tab2.dataframe(df_intervention['type'].value_counts())
 
 # ---------- CORPUS ---------------
 elif selected == pages['page_3']['name']:

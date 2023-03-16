@@ -86,11 +86,20 @@ def getDf_essai_Conditions():
         {"$limit": 100}
     ])))
 
+#Recupere le nombre d'essai par phase
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
     df = pd.DataFrame(list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}},{"$sort": {"_id": 1}}])))
     df = df.rename(columns={"_id": "Phase"})
     df = df.rename(columns={"count": "Nombre d'essai"})
+    return df
+
+#Recupere le nombre d'abstract par Revues (colonne venue) publiant le plus d'absract au total et par trimestre
+@st.cache_data(show_spinner=False)
+def getDf_Nbabstract():
+    df = pd.DataFrame(list(collection_Publication.db.Publication.aggregate([{ "$group": { "_id": "$venue", "count": { "$sum": 1 } } },{"$sort": {"count": -1}}])))
+    df = df.rename(columns={"_id": "Revues"})
+    df = df.rename(columns={"count": "Nombre de publication"})
     return df
 
 # insérer une liste d'objets dans la BD

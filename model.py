@@ -18,9 +18,9 @@ class MongoConnection:
 
 # Essai
 class Essai:
-    def __init__(self, id, registry, dateInserted, dateIntervention, linkout, gender, conditions, acronym, titre,
+    def __init__(self, _id, registry, dateInserted, dateIntervention, linkout, gender, conditions, acronym, titre,
                  abstract, phase, observationnelles, Randomise, interventions):
-        self.id = id
+        self._id = _id
         self.registry = registry
         self.dateInserted = dateInserted
         self.dateIntervention = dateIntervention
@@ -35,26 +35,6 @@ class Essai:
         self.Randomise = Randomise
         self.interventions = interventions
 
-    def getDict(self):
-        return {"_id": self.id,
-                "registry": self.registry,
-                "dateInserted": self.dateInserted,
-                "dateIntervention": self.dateIntervention,
-                "linkout": self.linkout,
-                "gender": self.gender,
-                "conditions": self.conditions,
-                "acronym": self.acronym,
-                "titre": self.titre,
-                "abstract": self.abstract,
-                "phase": self.phase,
-                "observationnelles": self.observationnelles,
-                "Randomise": self.Randomise,
-                "interventions": self.interventions
-                }
-
-    def __str__(self):
-        return str(self.getDict())
-
 
 # Intervention
 class Intervention:
@@ -65,21 +45,12 @@ class Intervention:
         self.arm_group_labels = arm_group_labels
         self.type = type
 
-    def getDict(self):
-        return {"name": self.name,
-                "description": self.description,
-                "other_names": self.other_names,
-                "armGroupLabels": self.arm_group_labels,
-                "type": self.type}
 
-    def __str__(self):
-        return str(self.getDict())
-
-
+# Publication
 class Publication:
-    def __init__(self, id, dateInserted, datePublished, doctype, doi, pmid, linkout, timesCited, altmetric, venue,
-                 publisher, title, openAccess, concept, meshTerms, observationnelles, randomise, essais):
-        self.id = id
+    def __init__(self, _id, dateInserted, datePublished, doctype, doi, pmid, linkout, timesCited, altmetric, venue,
+                 publisher, title, openAccess, concept, meshTerms, observationnelles, randomise, essais, author):
+        self._id = _id
         self.dateInserted = dateInserted
         self.datePublished = datePublished
         self.doctype = doctype
@@ -97,26 +68,4 @@ class Publication:
         self.observationnelles = observationnelles
         self.randomise = randomise
         self.essais = essais
-
-    def getDict(self):
-        return {"_id": self.id,
-                "dateInserted": self.dateInserted,
-                "datePublished": self.datePublished,
-                "doctype": self.doctype,
-                "doi": self.doi,
-                "pmid": self.pmid,
-                "linkout": self.linkout,
-                "timesCited": self.timesCited,
-                "altmetric": self.altmetric,
-                "venue": self.venue,
-                "publisher": self.publisher,
-                "title": self.title,
-                "openAccess": self.openAccess,
-                "concept": self.concept,
-                "meshTerms": self.meshTerms,
-                "observationnelles": self.observationnelles,
-                "randomise": self.randomise,
-                "essais": self.essais}
-
-    def __str__(self):
-        return str(self.getDict())
+        self.author = author

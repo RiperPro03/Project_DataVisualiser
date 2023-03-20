@@ -59,7 +59,7 @@ def getDf_intervention():
                                        inter['arm_group_labels'],
                                        inter['type'])
                           for i in interventions for inter in i['interventions']]
-    return pd.DataFrame(inter.getDict() for inter in Liste_intervention)
+    return pd.DataFrame(inter.__dict__ for inter in Liste_intervention)
 
 
 # Récupérer le top 100 des concepts les plus utilisés
@@ -84,18 +84,20 @@ def getDf_essai_Conditions():
         {"$limit": 100}
     ])))
 
+
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
     return pd.DataFrame(list(collection_Essai.aggregate([
-    {"$group": {"_id": "$phase", "count": {"$sum": 1}}},
-    {"$sort": {"_id": 1}}
+        {"$group": {"_id": "$phase", "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}}
     ])))
+
 
 # insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
     if liste_objets:
         # Convertir la liste d'objets en liste de dictionnaires
-        list_obj_dicts = [objet.getDict() for objet in liste_objets]
+        list_obj_dicts = [objet.__dict__ for objet in liste_objets]
         # Envoi des données à la BD
         collection.insert_many(list_obj_dicts)
         return True
@@ -122,6 +124,7 @@ def clean_dataframe(dataframe):
     dataframe['phase'] = dataframe['phase'].astype(str)
     return dataframe
 
+
 # retirer les doublons d'une dataframe
 def remove_duplicate_rows(df_merged, df_bd, id_column):
     if not df_bd.empty:
@@ -129,6 +132,34 @@ def remove_duplicate_rows(df_merged, df_bd, id_column):
     else:
         df_traiter = df_merged
     return df_traiter
+
+
+# récupérer les auteurs d'une publication à partir de son DOI
+def get_authors_from_doi(doi):
+    if doi == "nan":
+        return None
+    url = f"https://api.crossref.org/works/{doi}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        if 'author' not in data["message"]:
+            print(f"Erreur : Impossible de récupérer les informations pour le DOI {doi}")
+            print("--------------------------------------------------")
+            return None
+        authors = data["message"]["author"]
+        author_list = []
+
+        for author in authors:
+            if 'given' in author and 'family' in author:
+                full_name = f"{author['given']} {author['family']}"
+                author_list.append(full_name)
+        print(f"DOI: {doi} authors : {author_list}")
+        print("--------------------------------------------------")
+        return author_list
+    else:
+        print(f"Erreur : Impossible de récupérer les informations pour le DOI {doi}")
+        return None
 
 
 # ---------- SIDEBAR ----------
@@ -209,13 +240,13 @@ elif selected == pages['page_2']['name']:
         df_intervention = getDf_intervention()
         nb_intervention = len(df_intervention)
 
-        #Récuperation du nombre d'essai par phase
+        # Récuperation du nombre d'essai par phase
         df_Phase = getDf_NbPhase()
 
     tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
     tab1.plotly_chart(px.histogram(df_essai, x="dateInserted", color="registry", title="Nombre d'essais par jour"))
     tab2.dataframe(df_essai['dateInserted'].value_counts())
-    tab1.plotly_chart(px.pie(df_Phase,values='count', names='_id', title='Nombre d\'essai par phase'))
+    tab1.plotly_chart(px.pie(df_Phase, values='count', names='_id', title='Nombre d\'essai par phase'))
     st.line_chart(df_essai['dateInserted'].value_counts())
     st.area_chart(df_intervention['type'].value_counts())
 
@@ -355,13 +386,15 @@ elif selected == pages['page_4']['name']:
                     obs_value, rand_value = get_obs_rand_values(row['id'], obs_pub_ids, rand_pub_ids)
 
                     liste_essai_pub = []
+                    liste_authors = get_authors_from_doi(row['doi'])
 
                     # Ajouter l'objet Publication dans la liste
                     liste_publication.append(
                         Publication(row['id'], row['dateInserted'], row['datePublished'], ['doctype'], row['doi'],
                                     row['pmid'], row['linkout'], row['timesCited'], row['altmetric'], row['venue'],
                                     row['publisher'], row['title'], row['openAccess'], row['concepts'],
-                                    row['meshTerms'], obs_value, rand_value, liste_essai_pub))
+                                    row['meshTerms'], obs_value, rand_value, liste_essai_pub,
+                                    liste_authors))
 
                 progression_bar.progress(75)
 

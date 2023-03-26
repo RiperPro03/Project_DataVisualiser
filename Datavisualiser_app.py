@@ -86,6 +86,11 @@ def getDf_essai_Conditions():
         {"$limit": 100}
     ])))
 
+#recuperer le nombre de publication par publisher
+@st.cache_data(show_spinner=False)
+def getDF_publication_NBpubli_publisher():
+    return pd.DataFrame(list(collection_Publication.find({}, {"concept": 0})))
+
 #Recupere le nombre d'essai par phase
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
@@ -253,11 +258,15 @@ elif selected == pages['page_2']['name']:
         # Récuperation du nombre d'essai par phase
         df_Phase = getDf_NbPhase()
 
+        df_publication = getDF_publication_NBpubli_publisher()
+        df_publication.sort_values(by='publisher')
+
     tab1, tab2 = st.tabs(["📈 Chart", "🗃 Data"])
 
     tab1.plotly_chart(px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
     tab1.plotly_chart(px.pie(df_Phase,values='Nombre d\'essai', names='Phase', title='Nombre d\'essai par phase'))
-    tab1.area_chart(df_intervention['type'].value_counts())
+    tab1.plotly_chart(px.histogram(df_publication, x="datePublished", color="publisher", title="Nombre de publication par publisher",width=1200 ))
+
     tab2.write("Nombre d'essai par date d'insertion")
     tab2.dataframe(df_essai['Date d\'insertion'].value_counts())
     tab2.write("Nombre d'essai par Phase")

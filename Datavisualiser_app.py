@@ -96,10 +96,12 @@ def getDF_publication_NBpubli_publisher():
 # Recupere le nombre d'essai par phase
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
-    df = pd.DataFrame(
-        list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}}, {"$sort": {"_id": 1}}])))
+    df = pd.DataFrame(list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}},
+                                                       {"$sort": {"_id": 1}}])))
     df = df.rename(columns={"_id": "Phase"})
     df = df.rename(columns={"count": "Nombre d'essai"})
+    df = df.replace(to_replace='[pP]hase ', value='', regex=True)
+    df = df.astype({"Phase": str})
     return df
 
 
@@ -275,7 +277,7 @@ elif selected == pages['page_2']['name']:
     tab2_1, tab2_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     tab2_1.plotly_chart(px.pie(df_Phase, values='Nombre d\'essai', names='Phase', title='Nombre d\'essai par phase'))
     tab2_2.write("Nombre d'essai par Phase")
-    tab2_2.dataframe(df_Phase)
+    tab2_2.dataframe(df_Phase.groupby(by=["Phase"]).sum())
 
     tab3_1, tab3_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     tab3_1.plotly_chart(
@@ -292,10 +294,12 @@ elif selected == pages['page_3']['name']:
         # Récupération des essais
         df_essai = getDf_essai()
         nb_essai = len(df_essai)
+        gender = df_essai['gender'].unique().tolist()
 
         # Récupération des interventions
         df_intervention = getDf_intervention()
         nb_intervention = len(df_intervention)
+        type = df_intervention['type'].unique().tolist()
 
         # Récupération des publications
         df_pub = getDf_publication()
@@ -306,10 +310,20 @@ elif selected == pages['page_3']['name']:
         df_conditions = getDf_essai_Conditions()
 
     st.header("Essai : " + str(nb_essai))
-    st.dataframe(df_essai)
+    gender_selection = st.multiselect("Choisir un genre", gender, default=gender)
+    mask = df_essai['gender'].isin(gender_selection)
+    nombre_resultat = df_essai[mask].shape[0]
+    df_essai_filtre = df_essai[mask]
+    st.write("Nombre de résultat : " + str(nombre_resultat))
+    st.dataframe(df_essai_filtre)
 
     st.header("Intervention : " + str(nb_intervention))
-    st.dataframe(df_intervention)
+    type_selection = st.multiselect("Choisir un type", type, default=['Drug', 'Device', 'Other'])
+    mask = df_intervention['type'].isin(type_selection)
+    nombre_resultat = df_intervention[mask].shape[0]
+    df_intervention_filtre = df_intervention[mask]
+    st.write("Nombre de résultat : " + str(nombre_resultat))
+    st.dataframe(df_intervention_filtre)
 
     st.header("Publication : " + str(nb_pub))
     st.dataframe(df_pub)

@@ -86,23 +86,28 @@ def getDf_essai_Conditions():
         {"$limit": 100}
     ])))
 
-#recuperer le nombre de publication par publisher
+
+# recuperer le nombre de publication par publisher
 @st.cache_data(show_spinner=False)
 def getDF_publication_NBpubli_publisher():
     return pd.DataFrame(list(collection_Publication.find({}, {"concept": 0})))
 
-#Recupere le nombre d'essai par phase
+
+# Recupere le nombre d'essai par phase
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
-    df = pd.DataFrame(list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}},{"$sort": {"_id": 1}}])))
+    df = pd.DataFrame(
+        list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}}, {"$sort": {"_id": 1}}])))
     df = df.rename(columns={"_id": "Phase"})
     df = df.rename(columns={"count": "Nombre d'essai"})
     return df
 
-#Recupere le nombre d'abstract par Revues (colonne venue) publiant le plus d'absract au total et par trimestre
+
+# Recupere le nombre d'abstract par Revues (colonne venue) publiant le plus d'absract au total et par trimestre
 @st.cache_data(show_spinner=False)
 def getDf_Nbabstract():
-    df = pd.DataFrame(list(collection_Publication.db.Publication.aggregate([{ "$group": { "_id": "$venue", "count": { "$sum": 1 } } },{"$sort": {"count": -1}}])))
+    df = pd.DataFrame(list(collection_Publication.db.Publication.aggregate(
+        [{"$group": {"_id": "$venue", "count": {"$sum": 1}}}, {"$sort": {"count": -1}}])))
     df = df.rename(columns={"_id": "Revues"})
     df = df.rename(columns={"count": "Nombre de publication"})
     return df
@@ -262,17 +267,20 @@ elif selected == pages['page_2']['name']:
         df_publication.sort_values(by='publisher')
 
     tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
-    tab1_1.plotly_chart(px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
+    tab1_1.plotly_chart(
+        px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
     tab1_2.write("Nombre d'essai par date d'insertion")
     tab1_2.dataframe(df_essai['Date d\'insertion'].value_counts())
 
     tab2_1, tab2_2 = st.tabs(["📈 Graphique", "🗃 Données"])
-    tab2_1.plotly_chart(px.pie(df_Phase,values='Nombre d\'essai', names='Phase', title='Nombre d\'essai par phase'))
+    tab2_1.plotly_chart(px.pie(df_Phase, values='Nombre d\'essai', names='Phase', title='Nombre d\'essai par phase'))
     tab2_2.write("Nombre d'essai par Phase")
     tab2_2.dataframe(df_Phase)
 
     tab3_1, tab3_2 = st.tabs(["📈 Graphique", "🗃 Données"])
-    tab3_1.plotly_chart(px.histogram(df_publication, x="datePublished", color="publisher", title="Nombre de publication par publisher",width=1200 ))
+    tab3_1.plotly_chart(
+        px.histogram(df_publication, x="datePublished", color="publisher", title="Nombre de publication par publisher",
+                     width=1200))
     tab3_2.write("Nombre d'intervention Par type")
     tab3_2.dataframe(df_intervention['type'].value_counts())
 

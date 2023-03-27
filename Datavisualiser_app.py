@@ -261,10 +261,10 @@ elif selected == pages['page_2']['name']:
         df_publication = getDF_publication_NBpubli_publisher()
         df_publication.sort_values(by='publisher')
 
-    tab1, tab2 = st.tabs(["📈 Graphique", "🗃 Données"])
-    tab1.plotly_chart(px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
-    tab2.write("Nombre d'essai par date d'insertion")
-    tab2.dataframe(df_essai['Date d\'insertion'].value_counts())
+    tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
+    tab1_1.plotly_chart(px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
+    tab1_2.write("Nombre d'essai par date d'insertion")
+    tab1_2.dataframe(df_essai['Date d\'insertion'].value_counts())
 
     tab2_1, tab2_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     tab2_1.plotly_chart(px.pie(df_Phase,values='Nombre d\'essai', names='Phase', title='Nombre d\'essai par phase'))

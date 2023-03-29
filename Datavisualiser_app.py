@@ -5,6 +5,7 @@ import json
 import plotly.express as px
 import plotly.graph_objects as go
 import requests
+import datetime
 
 from json import JSONDecodeError
 from model import MongoConnection, Essai, Intervention, Publication
@@ -148,14 +149,15 @@ def getDf_publication_ivermectin():
 
 @st.cache_data(show_spinner=False)
 def getDf_publication_altmetric():
+    current_date = datetime.datetime.now().strftime("%Y-%m")
     return pd.DataFrame(list(collection_Publication.find({
         "$expr": {
             "$eq": [
-                {"$dateToString": {format: "%m", "date": "$datePublished"}},
-                {"$dateToString": {format: "%m", "date": "new Date()"}}
+                {"$dateToString": {"format": "%Y-%m", "date": "$datePublished"}},
+                current_date
             ]
         }
-    }).sort({"altmetric": -1, "timesCited": -1})))
+    }).sort([("altmetric", -1), ("timesCited", -1)])))
 
 
 # insérer une liste d'objets dans la BD
@@ -373,8 +375,8 @@ elif selected == pages['page_3']['name']:
         nb_essaie_ivermectin = len(df_essaie_ivermectin)
         nb_pub_ivermectin = len(df_publication_ivermectin)
 
-        # df_altemetric = getDf_publication_altmetric()
-        # nb_altemetric = len(df_altemetric)
+        df_altemetric = getDf_publication_altmetric()
+        nb_altemetric = len(df_altemetric)
 
     st.header("Essai : " + str(nb_essai))
     gender_selection = st.multiselect("Choisir un genre", gender, default=gender)
@@ -401,8 +403,8 @@ elif selected == pages['page_3']['name']:
     st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
     st.dataframe(df_publication_ivermectin)
 
-    # st.header("df_altemetric (publication): " + str(nb_altemetric))
-    # st.dataframe(df_altemetric)
+    st.header("Publication du mois "+datetime.datetime.now().strftime("%m-%Y") + " (publication): " + str(nb_altemetric))
+    st.dataframe(df_altemetric)
 
     st.header("Top " + str(len(df_concept)) + " Concept")
     st.dataframe(df_concept)

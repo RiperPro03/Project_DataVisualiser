@@ -6,6 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import requests
 import datetime
+from datetime import datetime
 
 from json import JSONDecodeError
 from model import MongoConnection, Essai, Intervention, Publication
@@ -158,6 +159,108 @@ def getDf_publication_altmetric():
             ]
         }
     }).sort([("altmetric", -1), ("timesCited", -1)])))
+
+
+@st.cache_data(show_spinner=False)
+def getDf_All_publication_date_par_mois():
+    return pd.DataFrame(list(collection_Publication.aggregate(
+        [{'$project':
+              {'_id': 0, 'datePublished':
+                  {'$dateToString':
+                       {'format': '%Y-%m', 'date': '$datePublished'}}}},
+         {'$group':
+              {'_id': '$datePublished'}},
+         {'$sort':
+              {'_id': -1}}])))
+
+
+@st.cache_data(show_spinner=False)
+def getConcept_par_date():
+    df = pd.DataFrame(list(collection_Publication.aggregate([
+        {
+            "$project": {
+                "_id": 0,
+                "concept": 1,
+                "datePublished": 1
+            }
+        },
+        {
+            "$unwind": "$concept"
+        },
+        {
+            "$group": {
+                "_id": {
+                    "concept": "$concept",
+                    "datePublished": {
+                        "$dateToString": {
+                            "format": "%Y-%m",
+                            "date": "$datePublished"
+                        }
+                    }
+                },
+                "count": {"$sum": 1}
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "concept": "$_id.concept",
+                "datePublished": "$_id.datePublished",
+                "count": 1
+            }
+        },
+        {"$sort": {"datePublished": -1, "count": -1}},
+        {"$limit": 20}
+    ])))
+    return df
+
+
+def get_filtered_data(date):
+    date_object = datetime.strptime(date, '%Y-%m')
+    print(date_object.strftime("%Y-%m"),date)
+    df=pd.DataFrame(list(collection_Publication.aggregate(
+            [
+                {
+                    "$match": {
+                        "datePublished": {"$regex": f"^{date}"}
+                    }
+                },
+                {
+                    "$project": {
+                        "_id": 0,
+                        "concept": 1,
+                        "datePublished": {
+                            "$dateToString": {
+                                "format": "%Y-%m",
+                                "date": "$datePublished"
+                            }
+                        }
+                    }
+                },
+                {
+                    "$unwind": "$concept"
+                },
+                {
+                    "$group": {
+                        "_id": {
+                            "concept": "$concept",
+                            "datePublished": "$datePublished"
+                        },
+                        "count": {"$sum": 1}
+                    }
+                },
+                {
+                    "$project": {
+                        "_id": 0,
+                        "concept": "$_id.concept",
+                        "datePublished": "$_id.datePublished",
+                        "count": 1
+                    }
+                },
+                {"$sort": {"datePublished": -1, "count": -1}},
+                {"$limit": 20}
+            ])))
+    return df
 
 
 # insérer une liste d'objets dans la BD
@@ -328,6 +431,9 @@ elif selected == pages['page_2']['name']:
         df_publication.sort_values(by='publisher')
         df_publication.sort_values(by='datePublished')
 
+        df_concept_par_date = getConcept_par_date()
+        df_all_date = getDf_All_publication_date_par_mois()
+
     tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     tab1_1.plotly_chart(
         px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
@@ -345,6 +451,15 @@ elif selected == pages['page_2']['name']:
                      width=1200))
     tab3_2.write("Tableau des publication")
     tab3_2.dataframe(df_publication)
+
+    tab4_1, tab4_2 = st.tabs(["📈 Graphique", "🗃 Données"])
+    selected_date = tab4_1.selectbox("Select a date", df_all_date)
+    filtered_df = get_filtered_data(selected_date)
+    tab4_1.dataframe(filtered_df)
+    # tab4_1.plotly_chart(
+    # px.pie(filtered_df, values='count',names='concept', title='concept par date'))
+    tab4_2.write("Tableau des concept par date ")
+    tab4_2.dataframe(df_concept_par_date)
 
 # ---------- CORPUS ---------------
 elif selected == pages['page_3']['name']:
@@ -403,7 +518,8 @@ elif selected == pages['page_3']['name']:
     st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
     st.dataframe(df_publication_ivermectin)
 
-    st.header("Publication du mois "+datetime.datetime.now().strftime("%m-%Y") + " (publication): " + str(nb_altemetric))
+    st.header(
+        "Publication du mois " + datetime.datetime.now().strftime("%m-%Y") + " (publication): " + str(nb_altemetric))
     st.dataframe(df_altemetric)
 
     st.header("Top " + str(len(df_concept)) + " Concept")

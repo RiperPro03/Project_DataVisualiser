@@ -85,7 +85,16 @@ def getDf_essai_Conditions():
         {"$sort": {"count": -1}},
         {"$limit": 100}
     ])))
-
+# Récupérer le top 20 des auteurs qui ont le plus publié
+@st.cache_data(show_spinner=False)
+def getTOP_20_Auteurs():
+    return pd.DataFrame(list(collection_Publication.aggregate([
+        {"$unwind": "$author"},
+        {"$group": {"_id": "$author",
+                    "nb": {"$sum": 1}}},
+        {"$sort": {"nb": -1}},
+        {"$limit": 20}
+    ])))
 
 # recuperer le nombre de publication par publisher
 @st.cache_data(show_spinner=False)
@@ -113,7 +122,16 @@ def getDf_Nbabstract():
     df = df.rename(columns={"_id": "Revues"})
     df = df.rename(columns={"count": "Nombre de publication"})
     return df
-
+#recherche dans les essais du mot Ivermectin
+@st.cache_data(show_spinner=False)
+def getDf_essai_ivermectin():
+    df = pd.DataFrame(list(collection_Essai.find({"$or":[{"interventions.name":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}}, {"interventions.arm_group_labels":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}},{"interventions.description":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
+    return df
+#recherche dans les publications du mot Ivermectin
+@st.cache_data(show_spinner=False)
+def getDf_publication_ivermectin():
+    df = pd.DataFrame(list(collection_Publication.find({"$or":[{"concept":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}},{"title":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
+    return df
 
 # insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
@@ -235,6 +253,8 @@ if selected == pages['page_1']['name']:
 
         # Récupération des publications
         nb_publication = collection_Publication.count_documents({})
+        df_auteurs = getTOP_20_Auteurs()
+
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Nombre d'essai", nb_essai)
@@ -248,6 +268,9 @@ if selected == pages['page_1']['name']:
     cont = st.container()
     cont.header("Répartition des essais par registre")
     cont.plotly_chart(fig)
+    auteurs = st.container()
+    auteurs.header("Auteurs ayant le plus publié")
+    auteurs.dataframe(df_auteurs)
 
 
 # ---------- STATISTIQUE ---------
@@ -267,6 +290,8 @@ elif selected == pages['page_2']['name']:
 
         df_publication = getDF_publication_NBpubli_publisher()
         df_publication.sort_values(by='publisher')
+        df_publication.sort_values(by='datePublished')
+
 
     tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     tab1_1.plotly_chart(
@@ -283,8 +308,8 @@ elif selected == pages['page_2']['name']:
     tab3_1.plotly_chart(
         px.histogram(df_publication, x="datePublished", color="publisher", title="Nombre de publication par publisher",
                      width=1200))
-    tab3_2.write("Nombre d'intervention Par type")
-    tab3_2.dataframe(df_intervention['type'].value_counts())
+    tab3_2.write("Tableau des publication")
+    tab3_2.dataframe(df_publication)
 
 # ---------- CORPUS ---------------
 elif selected == pages['page_3']['name']:
@@ -309,6 +334,12 @@ elif selected == pages['page_3']['name']:
 
         df_conditions = getDf_essai_Conditions()
 
+        df_essaie_ivermectin = getDf_essai_ivermectin()
+        df_publication_ivermectin = getDf_publication_ivermectin()
+
+        nb_essaie_ivermectin = len(df_essaie_ivermectin)
+        nb_pub_ivermectin = len(df_publication_ivermectin)
+
     st.header("Essai : " + str(nb_essai))
     gender_selection = st.multiselect("Choisir un genre", gender, default=gender)
     mask = df_essai['gender'].isin(gender_selection)
@@ -327,6 +358,13 @@ elif selected == pages['page_3']['name']:
 
     st.header("Publication : " + str(nb_pub))
     st.dataframe(df_pub)
+
+    st.header("Ivermectin (essai): " + str(nb_essaie_ivermectin))
+    st.dataframe(df_essaie_ivermectin)
+
+    st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
+    st.dataframe(df_publication_ivermectin)
+
 
     st.header("Top " + str(len(df_concept)) + " Concept")
     st.dataframe(df_concept)

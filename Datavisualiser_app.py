@@ -85,6 +85,8 @@ def getDf_essai_Conditions():
         {"$sort": {"count": -1}},
         {"$limit": 100}
     ])))
+
+
 # Récupérer le top 20 des auteurs qui ont le plus publié
 @st.cache_data(show_spinner=False)
 def getTOP_20_Auteurs():
@@ -95,6 +97,7 @@ def getTOP_20_Auteurs():
         {"$sort": {"nb": -1}},
         {"$limit": 20}
     ])))
+
 
 # recuperer le nombre de publication par publisher
 @st.cache_data(show_spinner=False)
@@ -122,17 +125,27 @@ def getDf_Nbabstract():
     df = df.rename(columns={"_id": "Revues"})
     df = df.rename(columns={"count": "Nombre de publication"})
     return df
-#recherche dans les essais du mot Ivermectin
+
+
+# recherche dans les essais du mot Ivermectin
 @st.cache_data(show_spinner=False)
 def getDf_essai_ivermectin():
-    df = pd.DataFrame(list(collection_Essai.find({"$or":[{"interventions.name":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}}, {"interventions.arm_group_labels":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}},{"interventions.description":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
-    return df
-#recherche dans les publications du mot Ivermectin
-@st.cache_data(show_spinner=False)
-def getDf_publication_ivermectin():
-    df = pd.DataFrame(list(collection_Publication.find({"$or":[{"concept":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}},{"title":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
+    df = pd.DataFrame(list(collection_Essai.find({"$or": [
+        {"interventions.name": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
+        {"interventions.arm_group_labels": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
+        {"interventions.description": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
     return df
 
+
+# recherche dans les publications du mot Ivermectin
+@st.cache_data(show_spinner=False)
+def getDf_publication_ivermectin():
+    df = pd.DataFrame(list(collection_Publication.find({"$or": [
+        {"concept": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
+        {"title": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
+    return df
+
+<<<<<<< Updated upstream
 #
 @st.cache_data(show_spinner=False)
 def getDf_publication_altmetric():
@@ -144,6 +157,9 @@ def getDf_publication_altmetric():
                     ]
                   }
                 }).sort({"altmetric":-1,"timesCited":-1})))
+=======
+
+>>>>>>> Stashed changes
 # insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
     if liste_objets:
@@ -266,22 +282,34 @@ if selected == pages['page_1']['name']:
         nb_publication = collection_Publication.count_documents({})
         df_auteurs = getTOP_20_Auteurs()
 
+        df_publication = getDF_publication_NBpubli_publisher()
+        df_publication.sort_values(by='publisher')
+        df_publication.sort_values(by='datePublished')
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Nombre d'essai", nb_essai)
     col2.metric("Nombre d'intervention", nb_intervention)
     col3.metric("Nombre de publication", nb_publication)
 
-    labels = df_essai['registry'].drop_duplicates()
-    values = [len(df_essai[df_essai['registry'] == label]) for label in labels]
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
-    fig.update_traces(textposition='inside')
-    cont = st.container()
-    cont.header("Répartition des essais par registre")
-    cont.plotly_chart(fig)
-    auteurs = st.container()
-    auteurs.header("Auteurs ayant le plus publié")
-    auteurs.dataframe(df_auteurs)
+    c1, c2 = st.columns((7, 4))
+    # graphique circulaire
+    with c1:
+        labels = df_essai['registry'].drop_duplicates()
+        values = [len(df_essai[df_essai['registry'] == label]) for label in labels]
+        fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.3)])
+        fig.update_traces(textposition='inside')
+        st.header("Répartition des essais par registre")
+        st.plotly_chart(fig)
+
+    # data auteur ayant le plus publié
+    with c2:
+        st.header("Auteurs ayant le plus publié")
+        st.dataframe(df_auteurs)
+
+    # graphique histogramme
+    st.plotly_chart(
+        px.histogram(df_publication, x="datePublished", color="publisher", title="Nombre de publication par publisher",
+                     width=1200))
 
 
 # ---------- STATISTIQUE ---------
@@ -302,7 +330,6 @@ elif selected == pages['page_2']['name']:
         df_publication = getDF_publication_NBpubli_publisher()
         df_publication.sort_values(by='publisher')
         df_publication.sort_values(by='datePublished')
-
 
     tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     tab1_1.plotly_chart(
@@ -335,7 +362,7 @@ elif selected == pages['page_3']['name']:
         # Récupération des interventions
         df_intervention = getDf_intervention()
         nb_intervention = len(df_intervention)
-        type = df_intervention['type'].unique().tolist()
+        type_intervention = df_intervention['type'].unique().tolist()
 
         # Récupération des publications
         df_pub = getDf_publication()
@@ -364,7 +391,7 @@ elif selected == pages['page_3']['name']:
     st.dataframe(df_essai_filtre)
 
     st.header("Intervention : " + str(nb_intervention))
-    type_selection = st.multiselect("Choisir un type", type, default=['Drug', 'Device', 'Other'])
+    type_selection = st.multiselect("Choisir un type", type_intervention, default=['Drug', 'Device', 'Other'])
     mask = df_intervention['type'].isin(type_selection)
     nombre_resultat = df_intervention[mask].shape[0]
     df_intervention_filtre = df_intervention[mask]
@@ -379,10 +406,14 @@ elif selected == pages['page_3']['name']:
 
     st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
     st.dataframe(df_publication_ivermectin)
+<<<<<<< Updated upstream
     """
     st.header("df_altemetric (publication): " + str(nb_altemetric))
     st.dataframe(df_altemetric)
     """
+=======
+
+>>>>>>> Stashed changes
     st.header("Top " + str(len(df_concept)) + " Concept")
     st.dataframe(df_concept)
 
@@ -441,12 +472,14 @@ elif selected == pages['page_4']['name']:
 
                 # Supprimer les lignes en double
                 df_traiter_essai = remove_duplicate_rows(df_essai_merged, df_bd_essai, 'id')
+
                 # DataFrame des essais à supprimer
                 # if not df_bd_essai.empty:
                 #     df_drop_essai = df_bd_essai[~df_bd_essai['_id'].isin(df_essai_merged['id'])]
 
                 # Supprimer les lignes en double
                 df_traiter_pub = remove_duplicate_rows(df_pub_merged, df_bd_pub, 'id')
+
                 # DataFrame des publications à supprimer
                 # if not df_bd_pub.empty:
                 #     df_drop_pub = df_bd_pub[~df_bd_pub['_id'].isin(df_pub_merged['id'])]

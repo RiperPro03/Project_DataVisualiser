@@ -133,6 +133,17 @@ def getDf_publication_ivermectin():
     df = pd.DataFrame(list(collection_Publication.find({"$or":[{"concept":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}},{"title":{"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
     return df
 
+#
+@st.cache_data(show_spinner=False)
+def getDf_publication_altmetric():
+    return pd.DataFrame(list(collection_Publication.find({
+                  "$expr": {
+                    "$eq": [
+                      { "$dateToString": { format: "%m", "date": "$datePublished"}},
+                      { "$dateToString": { format: "%m", "date": "new Date()" } }
+                    ]
+                  }
+                }).sort({"altmetric":-1,"timesCited":-1})))
 # insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
     if liste_objets:
@@ -339,6 +350,10 @@ elif selected == pages['page_3']['name']:
 
         nb_essaie_ivermectin = len(df_essaie_ivermectin)
         nb_pub_ivermectin = len(df_publication_ivermectin)
+        """
+        df_altemetric = getDf_publication_altmetric()
+        nb_altemetric = len(df_altemetric)
+        """
 
     st.header("Essai : " + str(nb_essai))
     gender_selection = st.multiselect("Choisir un genre", gender, default=gender)
@@ -364,8 +379,10 @@ elif selected == pages['page_3']['name']:
 
     st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
     st.dataframe(df_publication_ivermectin)
-
-
+    """
+    st.header("df_altemetric (publication): " + str(nb_altemetric))
+    st.dataframe(df_altemetric)
+    """
     st.header("Top " + str(len(df_concept)) + " Concept")
     st.dataframe(df_concept)
 

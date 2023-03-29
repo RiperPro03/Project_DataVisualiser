@@ -145,21 +145,19 @@ def getDf_publication_ivermectin():
         {"title": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
     return df
 
-<<<<<<< Updated upstream
-#
+
 @st.cache_data(show_spinner=False)
 def getDf_publication_altmetric():
     return pd.DataFrame(list(collection_Publication.find({
-                  "$expr": {
-                    "$eq": [
-                      { "$dateToString": { format: "%m", "date": "$datePublished"}},
-                      { "$dateToString": { format: "%m", "date": "new Date()" } }
-                    ]
-                  }
-                }).sort({"altmetric":-1,"timesCited":-1})))
-=======
+        "$expr": {
+            "$eq": [
+                {"$dateToString": {format: "%m", "date": "$datePublished"}},
+                {"$dateToString": {format: "%m", "date": "new Date()"}}
+            ]
+        }
+    }).sort({"altmetric": -1, "timesCited": -1})))
 
->>>>>>> Stashed changes
+
 # insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
     if liste_objets:
@@ -221,11 +219,8 @@ def get_authors_from_doi(doi):
             if 'given' in author and 'family' in author:
                 full_name = f"{author['given']} {author['family']}"
                 author_list.append(full_name)
-        print(f"DOI: {doi} authors : {author_list}")
-        print("--------------------------------------------------")
         return author_list
     else:
-        print(f"Erreur : Impossible de récupérer les informations pour le DOI {doi}")
         return None
 
 
@@ -377,10 +372,9 @@ elif selected == pages['page_3']['name']:
 
         nb_essaie_ivermectin = len(df_essaie_ivermectin)
         nb_pub_ivermectin = len(df_publication_ivermectin)
-        """
-        df_altemetric = getDf_publication_altmetric()
-        nb_altemetric = len(df_altemetric)
-        """
+
+        # df_altemetric = getDf_publication_altmetric()
+        # nb_altemetric = len(df_altemetric)
 
     st.header("Essai : " + str(nb_essai))
     gender_selection = st.multiselect("Choisir un genre", gender, default=gender)
@@ -406,14 +400,10 @@ elif selected == pages['page_3']['name']:
 
     st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
     st.dataframe(df_publication_ivermectin)
-<<<<<<< Updated upstream
-    """
-    st.header("df_altemetric (publication): " + str(nb_altemetric))
-    st.dataframe(df_altemetric)
-    """
-=======
 
->>>>>>> Stashed changes
+    # st.header("df_altemetric (publication): " + str(nb_altemetric))
+    # st.dataframe(df_altemetric)
+
     st.header("Top " + str(len(df_concept)) + " Concept")
     st.dataframe(df_concept)
 

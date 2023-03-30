@@ -151,7 +151,7 @@ def getDf_publication_ivermectin():
 # recupere toutes les publication du mois courant trié par score altemetric et citation
 @st.cache_data(show_spinner=False)
 def getDf_publication_altmetric():
-    current_date = datetime.datetime.now().strftime("%Y-%m")
+    current_date = datetime.now().strftime("%Y-%m")
     return pd.DataFrame(list(collection_Publication.find({
         "$expr": {
             "$eq": [
@@ -489,7 +489,7 @@ elif selected == pages['page_3']['name']:
     st.dataframe(df_publication_ivermectin)
 
     st.header(
-        "Publication du mois " + datetime.datetime.now().strftime("%m-%Y") + " (publication): " + str(nb_altemetric))
+        "Publication du mois " + datetime.now().strftime("%m-%Y") + " (publication): " + str(nb_altemetric))
     st.dataframe(df_altemetric)
 
     st.header("Top " + str(len(df_concept)) + " Concept")

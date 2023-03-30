@@ -101,13 +101,13 @@ def getTOP_20_Auteurs():
     ])))
 
 
-# Récupérer le nombre de publication par publisher
+# Récupérer le nombre de publications par publisher
 @st.cache_data(show_spinner=False)
 def getDF_publication_NBpubli_publisher():
     return pd.DataFrame(list(collection_Publication.find({}, {"concept": 0})))
 
 
-# Récupère le nombre d'essai par phase
+# Récupère le nombre d'essais par phase
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
     df = pd.DataFrame(list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}},
@@ -148,7 +148,7 @@ def getDf_publication_ivermectin():
     return df
 
 
-# recupere toutes les publication du mois courant trié par score altemetric et citation
+# Récupère toutes les publications du mois courant trié par score altemetric et citation
 @st.cache_data(show_spinner=False)
 def getDf_publication_altmetric():
     current_date = datetime.now().strftime("%Y-%m")
@@ -162,7 +162,7 @@ def getDf_publication_altmetric():
     }).sort([("altmetric", -1), ("timesCited", -1)])))
 
 
-# Récupere toutes les dates des publication par mois
+# Récupere toutes les dates des publications par mois
 @st.cache_data(show_spinner=False)
 def getDf_All_publication_date_par_mois():
     return pd.DataFrame(list(collection_Publication.aggregate(
@@ -176,7 +176,7 @@ def getDf_All_publication_date_par_mois():
               {'_id': -1}}])))
 
 
-# Recupere les 20 concept les plus utilisé pour un mois donné
+# Récupère les 20 concepts les plus utilisés pour un mois donné
 def get_filtered_data(date):
     df = pd.DataFrame(list(collection_Publication.aggregate(
         [
@@ -256,7 +256,7 @@ def get_obs_rand_values(id, df_obs_ids, df_rand_ids):
     return obs_value, rand_value
 
 
-# Nettoyer les erreur de la dataframe essai
+# Nettoyer les erreurs de la dataframe essai
 def clean_dataframe(dataframe):
     dataframe = dataframe.loc[dataframe['id'].str.len() < 30]
     dataframe = dataframe.dropna(subset=['date'])
@@ -351,7 +351,7 @@ if selected == pages['page_1']['name']:
         nb_publication = collection_Publication.count_documents({})
         df_auteurs = getTOP_20_Auteurs()
 
-        # recupere le nombre de publication par publisher
+        # Récupère le nombre de publications par publisher
         df_publication = getDF_publication_NBpubli_publisher()
         df_publication.sort_values(by='publisher')
         df_publication.sort_values(by='datePublished')
@@ -376,7 +376,7 @@ if selected == pages['page_1']['name']:
         st.header("Auteurs ayant le plus publié")
         st.dataframe(df_auteurs)
 
-    # Affiche le nombre de publication d'un publisher par date
+    # Affiche le nombre de publications d'un publisher par date
     st.plotly_chart(
         px.histogram(df_publication, x="datePublished", color="publisher", title="Nombre de publication par publisher",
                      width=1200))
@@ -394,15 +394,15 @@ elif selected == pages['page_2']['name']:
         df_intervention = getDf_intervention()
         nb_intervention = len(df_intervention)
 
-        # Récuperation du nombre d'essai par phase
+        # Récuperation du nombre d'essais par phase
         df_Phase = getDf_NbPhase()
 
-        # recupere le nombre de publication par publisher
+        # Récupère le nombre de publications par publisher
         df_publication = getDF_publication_NBpubli_publisher()
         df_publication.sort_values(by='publisher')
         df_publication.sort_values(by='datePublished')
 
-        # recupere toutes les dates par mois des publications
+        # Récupère toutes les dates par mois des publications
         df_all_date = getDf_All_publication_date_par_mois()
 
     tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
@@ -424,7 +424,7 @@ elif selected == pages['page_2']['name']:
     tab3_2.dataframe(df_publication)
 
     tab4_1, tab4_2 = st.tabs(["📈 Graphique", "🗃 Données"])
-    selected_date = tab4_1.selectbox("Selectionner une période", df_all_date)
+    selected_date = tab4_1.selectbox("Sélectionner une période", df_all_date)
     filtered_df = get_filtered_data(selected_date)
     tab4_1.plotly_chart(px.pie(filtered_df, values='count', names='concept', title=f'Les 20 concept les plus utilisé '
                                                                                    f'du mois {selected_date}'))
@@ -621,13 +621,13 @@ elif selected == pages['page_4']['name']:
                 # if not df_drop_essai.empty:
                 #     st.info("Essai a supprimé detecté")
                 #     collection_Essai.delete_many({'_id': {'$in': list(df_drop_essai['_id'].values)}})
-                #     st.write("Nombre d'essai qui a été supprimer de la base de données : ", len(df_drop_essai))
+                #     st.write("Nombre d'essais qui a été supprimer de la base de données : ", len(df_drop_essai))
                 #     st.dataframe(df_drop_essai)
                 #     st.cache_data.clear()
                 # if not df_drop_pub.empty:
                 #     st.info("Publication a supprimé detecté")
                 #     collection_Publication.delete_many({'_id': {'$in': list(df_drop_pub['_id'].values)}})
-                #     st.write("Nombre de publication qui a été supprimer de la base de données : ", len(df_drop_pub))
+                #     st.write("Nombre de publications qui a été supprimer de la base de données : ", len(df_drop_pub))
                 #     st.dataframe(df_drop_pub)
                 #     st.cache_data.clear()
 

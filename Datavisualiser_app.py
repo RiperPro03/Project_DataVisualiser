@@ -11,7 +11,7 @@ from datetime import datetime
 from json import JSONDecodeError
 from model import MongoConnection, Essai, Intervention, Publication
 
-# ---------- SETTING ----------
+# ---------- SETTINGS ----------
 app_name = "DataVisualizer"
 app_icon = ":bar_chart:"  # https://www.webfx.com/tools/emoji-cheat-sheet/
 pages = {
@@ -38,7 +38,7 @@ with st.spinner('Connexion à la base de données en cours...'):
         st.stop()
 
 
-# ---------- FONCTION ----------
+# ---------- FONCTIONS ----------
 # Récupérer la dataframe essai depuis la BD
 @st.cache_data(show_spinner=False)
 def getDf_essai():
@@ -57,13 +57,13 @@ def getDf_publication():
 @st.cache_data(show_spinner=False)
 def getDf_intervention():
     interventions = collection_Essai.find({'interventions': {'$ne': None}}, {'_id': 0, 'interventions': 1})
-    Liste_intervention = [Intervention(inter['name'],
+    liste_intervention = [Intervention(inter['name'],
                                        inter['description'],
                                        inter['other_names'],
                                        inter['arm_group_labels'],
                                        inter['type'])
                           for i in interventions for inter in i['interventions']]
-    return pd.DataFrame(inter.__dict__ for inter in Liste_intervention)
+    return pd.DataFrame(inter.__dict__ for inter in liste_intervention)
 
 
 # Récupérer le top 100 des concepts les plus utilisés
@@ -89,7 +89,7 @@ def getDf_essai_Conditions():
     ])))
 
 
-# Récupérer le top 20 des auteurs qui ont le plus publié
+# Récupérer le top 20 des auteurs qui ont le plus publiés
 @st.cache_data(show_spinner=False)
 def getTOP_20_Auteurs():
     return pd.DataFrame(list(collection_Publication.aggregate([
@@ -101,13 +101,13 @@ def getTOP_20_Auteurs():
     ])))
 
 
-# recuperer le nombre de publication par publisher
+# Récupérer le nombre de publication par publisher
 @st.cache_data(show_spinner=False)
 def getDF_publication_NBpubli_publisher():
     return pd.DataFrame(list(collection_Publication.find({}, {"concept": 0})))
 
 
-# Recupere le nombre d'essai par phase
+# Récupère le nombre d'essai par phase
 @st.cache_data(show_spinner=False)
 def getDf_NbPhase():
     df = pd.DataFrame(list(collection_Essai.aggregate([{"$group": {"_id": "$phase", "count": {"$sum": 1}}},
@@ -119,7 +119,7 @@ def getDf_NbPhase():
     return df
 
 
-# Recupere le nombre d'abstract par Revues (colonne venue) publiant le plus d'absract au total et par trimestre
+# Récupère le nombre d'abstract par Revues (colonne venue) publiant le plus d'absract au total et par trimestre
 @st.cache_data(show_spinner=False)
 def getDf_Nbabstract():
     df = pd.DataFrame(list(collection_Publication.db.Publication.aggregate(
@@ -129,7 +129,7 @@ def getDf_Nbabstract():
     return df
 
 
-# recherche dans les essais du mot Ivermectin
+# Recherche dans les essais du mot Ivermectin
 @st.cache_data(show_spinner=False)
 def getDf_essai_ivermectin():
     df = pd.DataFrame(list(collection_Essai.find({"$or": [
@@ -139,7 +139,7 @@ def getDf_essai_ivermectin():
     return df
 
 
-# recherche dans les publications du mot Ivermectin
+# Recherche dans les publications du mot Ivermectin
 @st.cache_data(show_spinner=False)
 def getDf_publication_ivermectin():
     df = pd.DataFrame(list(collection_Publication.find({"$or": [
@@ -217,53 +217,53 @@ def getConcept_par_date():
 
 def get_filtered_data(date):
     date_object = datetime.strptime(date, '%Y-%m')
-    print(date_object.strftime("%Y-%m"),date)
-    df=pd.DataFrame(list(collection_Publication.aggregate(
-            [
-                {
-                    "$match": {
-                        "datePublished": {"$regex": f"^{date}"}
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "concept": 1,
-                        "datePublished": {
-                            "$dateToString": {
-                                "format": "%Y-%m",
-                                "date": "$datePublished"
-                            }
+    print(date_object.strftime("%Y-%m"), date)
+    df = pd.DataFrame(list(collection_Publication.aggregate(
+        [
+            {
+                "$match": {
+                    "datePublished": {"$regex": f"^{date}"}
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "concept": 1,
+                    "datePublished": {
+                        "$dateToString": {
+                            "format": "%Y-%m",
+                            "date": "$datePublished"
                         }
                     }
-                },
-                {
-                    "$unwind": "$concept"
-                },
-                {
-                    "$group": {
-                        "_id": {
-                            "concept": "$concept",
-                            "datePublished": "$datePublished"
-                        },
-                        "count": {"$sum": 1}
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "concept": "$_id.concept",
-                        "datePublished": "$_id.datePublished",
-                        "count": 1
-                    }
-                },
-                {"$sort": {"datePublished": -1, "count": -1}},
-                {"$limit": 20}
-            ])))
+                }
+            },
+            {
+                "$unwind": "$concept"
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "concept": "$concept",
+                        "datePublished": "$datePublished"
+                    },
+                    "count": {"$sum": 1}
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "concept": "$_id.concept",
+                    "datePublished": "$_id.datePublished",
+                    "count": 1
+                }
+            },
+            {"$sort": {"datePublished": -1, "count": -1}},
+            {"$limit": 20}
+        ])))
     return df
 
 
-# insérer une liste d'objets dans la BD
+# Insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
     if liste_objets:
         # Convertir la liste d'objets en liste de dictionnaires
@@ -275,7 +275,7 @@ def insert_objects_to_mongoDB(liste_objets, collection):
         return False
 
 
-# definir si un essai est randomisé ou observationel
+# Définir si un essai est randomisé ou observationel
 def get_obs_rand_values(id, df_obs_ids, df_rand_ids):
     obs_value, rand_value = 0, 0
 
@@ -287,7 +287,7 @@ def get_obs_rand_values(id, df_obs_ids, df_rand_ids):
     return obs_value, rand_value
 
 
-# nettoyer les erreur de la dataframe essai
+# Nettoyer les erreur de la dataframe essai
 def clean_dataframe(dataframe):
     dataframe = dataframe.loc[dataframe['id'].str.len() < 30]
     dataframe = dataframe.dropna(subset=['date'])
@@ -295,7 +295,7 @@ def clean_dataframe(dataframe):
     return dataframe
 
 
-# retirer les doublons d'une dataframe
+# Retirer les doublons d'une dataframe
 def remove_duplicate_rows(df_merged, df_bd, id_column):
     if not df_bd.empty:
         df_traiter = df_merged[~df_merged[id_column].isin(df_bd['_id'])]
@@ -304,7 +304,7 @@ def remove_duplicate_rows(df_merged, df_bd, id_column):
     return df_traiter
 
 
-# récupérer les auteurs d'une publication à partir de son DOI
+# Récupérer les auteurs d'une publication à partir de son DOI
 def get_authors_from_doi(doi):
     if doi == "nan":
         return None
@@ -366,7 +366,7 @@ st.sidebar.markdown('''
 Created with ❤️ by [Christopher ASIN](https://github.com/RiperPro03).
 ''')
 
-# ---------- ACCEUIL ----------
+# ---------- ACCUEIL ----------
 if selected == pages['page_1']['name']:
     st.title(selected)
     with st.spinner('Chargement des données en cours...'):
@@ -412,7 +412,7 @@ if selected == pages['page_1']['name']:
                      width=1200))
 
 
-# ---------- STATISTIQUE ---------
+# ---------- STATISTIQUES ---------
 elif selected == pages['page_2']['name']:
     st.title(selected)
     with st.spinner('Chargement des données en cours...'):
@@ -595,7 +595,7 @@ elif selected == pages['page_4']['name']:
                 progression_bar.progress(55)
 
                 liste_essai = []
-                # Créeation d'objet Essai puis ajouter dans la liste
+                # Création d'objet Essai puis ajouter dans la liste
                 for index, row in df_traiter_essai.iterrows():
                     if not row['interventions'] is None:
                         try:

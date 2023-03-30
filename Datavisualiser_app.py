@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 import requests
 import datetime
 from datetime import datetime
-
 from json import JSONDecodeError
+
 from model import MongoConnection, Essai, Intervention, Publication
 
 # ---------- SETTINGS ----------
@@ -19,7 +19,6 @@ pages = {
     "page_2": {'name': 'Statistique', 'icon': 'bi-graph-up-arrow'},
     "page_3": {'name': 'Corpus', 'icon': 'bi-card-text'},
     "page_4": {'name': 'Import', 'icon': 'cloud-upload'},
-    "page_5": {'name': 'TEST', 'icon': 'bi-tools'},
 }
 liste_noms_pages = [pages[page]['name'] for page in pages]
 liste_icons_pages = [pages[page]['icon'] for page in pages]
@@ -135,7 +134,8 @@ def getDf_essai_ivermectin():
     df = pd.DataFrame(list(collection_Essai.find({"$or": [
         {"interventions.name": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
         {"interventions.arm_group_labels": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
-        {"interventions.description": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
+        {"interventions.description": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]},
+        {"interventions": 0})))
     return df
 
 
@@ -176,9 +176,21 @@ def getDf_All_publication_date_par_mois():
               {'_id': -1}}])))
 
 
+# Récupère les essai qui ont pour intervention un arm_group_labels contenant le mot Drug
+@st.cache_data(show_spinner=False)
+def getDf_essai_drug():
+    return pd.DataFrame(
+        list(collection_Essai.aggregate([
+            {
+                "$match": {"interventions.type": "Drug"}
+            },
+            {"$project": {"interventions": 0}},
+        ])))
+
+
 # Récupère les 20 concepts les plus utilisés pour un mois donné
 def get_filtered_data(date):
-    df = pd.DataFrame(list(collection_Publication.aggregate(
+    return pd.DataFrame(list(collection_Publication.aggregate(
         [
             {"$match": {
                 "$expr": {
@@ -228,8 +240,6 @@ def get_filtered_data(date):
             {"$sort": {"datePublished": -1, "count": -1}},
             {"$limit": 20}
         ])))
-
-    return df
 
 
 # Insérer une liste d'objets dans la BD
@@ -330,10 +340,6 @@ elif selected == pages['page_5']['name']:
 
 if st.sidebar.button('Recharger les données'):
     st.cache_data.clear()
-st.sidebar.markdown('''
----
-Created with ❤️ by [Christopher ASIN](https://github.com/RiperPro03).
-''')
 
 # ---------- ACCUEIL ----------
 if selected == pages['page_1']['name']:
@@ -426,8 +432,8 @@ elif selected == pages['page_2']['name']:
     tab4_1, tab4_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     selected_date = tab4_1.selectbox("Sélectionner une période", df_all_date)
     filtered_df = get_filtered_data(selected_date)
-    tab4_1.plotly_chart(px.pie(filtered_df, values='count', names='concept', title=f'Les 20 concept les plus utilisé '
-                                                                                   f'du mois {selected_date}'))
+    tab4_1.plotly_chart(px.bar(filtered_df, y='count', x='concept', title=f'Les 20 concept les plus utilisé '
+                                                                          f'du mois {selected_date}', text_auto='.2s'))
     tab4_2.write(f"Tableau des concept par date pour le mois {selected_date}")
     tab4_2.dataframe(filtered_df)
 
@@ -463,6 +469,8 @@ elif selected == pages['page_3']['name']:
         df_altemetric = getDf_publication_altmetric()
         nb_altemetric = len(df_altemetric)
 
+        df_essai_drug = getDf_essai_drug()
+
     st.header("Essai : " + str(nb_essai))
     gender_selection = st.multiselect("Choisir un genre", gender, default=gender)
     mask = df_essai['gender'].isin(gender_selection)
@@ -487,6 +495,9 @@ elif selected == pages['page_3']['name']:
 
     st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
     st.dataframe(df_publication_ivermectin)
+
+    st.header("Drug (essai): " + str(len(df_essai_drug)))
+    st.dataframe(df_essai_drug)
 
     st.header(
         "Publication du mois " + datetime.now().strftime("%m-%Y") + " (publication): " + str(nb_altemetric))
@@ -657,18 +668,3 @@ elif selected == pages['page_4']['name']:
             container.write("Nombre de publications importées: " + str(len(liste_publication)))
             container.write(df_traiter_pub)
             st.cache_data.clear()
-
-# ---------- TEST -----------
-elif selected == pages['page_5']['name']:
-    st.title(selected)
-
-    doi = st.text_input('Entrer un DOI')
-    if doi:
-        url = f'https://api.crossref.org/works/{doi}'
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            data = json.loads(response.text)
-            st.json(data)
-        else:
-            st.error('Erreur : impossible de récupérer les métadonnées de la publication')

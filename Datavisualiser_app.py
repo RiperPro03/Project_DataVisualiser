@@ -148,6 +148,7 @@ def getDf_publication_ivermectin():
     return df
 
 
+# recupere toutes les publication du mois courant trié par score altemetric et citation
 @st.cache_data(show_spinner=False)
 def getDf_publication_altmetric():
     current_date = datetime.datetime.now().strftime("%Y-%m")
@@ -161,6 +162,7 @@ def getDf_publication_altmetric():
     }).sort([("altmetric", -1), ("timesCited", -1)])))
 
 
+# Récupere toutes les dates des publication par mois
 @st.cache_data(show_spinner=False)
 def getDf_All_publication_date_par_mois():
     return pd.DataFrame(list(collection_Publication.aggregate(
@@ -174,92 +176,59 @@ def getDf_All_publication_date_par_mois():
               {'_id': -1}}])))
 
 
-@st.cache_data(show_spinner=False)
-def getConcept_par_date():
-    df = pd.DataFrame(list(collection_Publication.aggregate([
-        {
-            "$project": {
-                "_id": 0,
-                "concept": 1,
-                "datePublished": 1
-            }
-        },
-        {
-            "$unwind": "$concept"
-        },
-        {
-            "$group": {
-                "_id": {
-                    "concept": "$concept",
+# Recupere les 20 concept les plus utilisé pour un mois donné
+def get_filtered_data(date):
+    df = pd.DataFrame(list(collection_Publication.aggregate(
+        [
+            {"$match": {
+                "$expr": {
+                    "$eq": [
+                        {
+                            "$dateToString": {
+                                "format": "%Y-%m",
+                                "date": "$datePublished"
+                            }
+                        },
+                        f"{(date)}"
+                    ]
+                }
+            }},
+            {
+                "$project": {
+                    "_id": 0,
+                    "concept": 1,
                     "datePublished": {
                         "$dateToString": {
                             "format": "%Y-%m",
                             "date": "$datePublished"
                         }
                     }
-                },
-                "count": {"$sum": 1}
-            }
-        },
-        {
-            "$project": {
-                "_id": 0,
-                "concept": "$_id.concept",
-                "datePublished": "$_id.datePublished",
-                "count": 1
-            }
-        },
-        {"$sort": {"datePublished": -1, "count": -1}},
-        {"$limit": 20}
-    ])))
-    return df
+                }
+            },
+            {
+                "$unwind": "$concept"
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "concept": "$concept",
+                        "datePublished": "$datePublished"
+                    },
+                    "count": {"$sum": 1}
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "concept": "$_id.concept",
+                    "datePublished": "$_id.datePublished",
+                    "count": 1
+                }
+            },
+            {"$sort": {"datePublished": -1, "count": -1}},
+            {"$limit": 20}
+        ])))
 
-
-def get_filtered_data(date):
-    date_object = datetime.strptime(date, '%Y-%m')
-    print(date_object.strftime("%Y-%m"),date)
-    df=pd.DataFrame(list(collection_Publication.aggregate(
-            [
-                {
-                    "$match": {
-                        "datePublished": {"$regex": f"^{date}"}
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "concept": 1,
-                        "datePublished": {
-                            "$dateToString": {
-                                "format": "%Y-%m",
-                                "date": "$datePublished"
-                            }
-                        }
-                    }
-                },
-                {
-                    "$unwind": "$concept"
-                },
-                {
-                    "$group": {
-                        "_id": {
-                            "concept": "$concept",
-                            "datePublished": "$datePublished"
-                        },
-                        "count": {"$sum": 1}
-                    }
-                },
-                {
-                    "$project": {
-                        "_id": 0,
-                        "concept": "$_id.concept",
-                        "datePublished": "$_id.datePublished",
-                        "count": 1
-                    }
-                },
-                {"$sort": {"datePublished": -1, "count": -1}},
-                {"$limit": 20}
-            ])))
     return df
 
 
@@ -382,6 +351,7 @@ if selected == pages['page_1']['name']:
         nb_publication = collection_Publication.count_documents({})
         df_auteurs = getTOP_20_Auteurs()
 
+        # recupere le nombre de publication par publisher
         df_publication = getDF_publication_NBpubli_publisher()
         df_publication.sort_values(by='publisher')
         df_publication.sort_values(by='datePublished')
@@ -406,7 +376,7 @@ if selected == pages['page_1']['name']:
         st.header("Auteurs ayant le plus publié")
         st.dataframe(df_auteurs)
 
-    # graphique histogramme
+    # Affiche le nombre de publication d'un publisher par date
     st.plotly_chart(
         px.histogram(df_publication, x="datePublished", color="publisher", title="Nombre de publication par publisher",
                      width=1200))
@@ -427,11 +397,12 @@ elif selected == pages['page_2']['name']:
         # Récuperation du nombre d'essai par phase
         df_Phase = getDf_NbPhase()
 
+        # recupere le nombre de publication par publisher
         df_publication = getDF_publication_NBpubli_publisher()
         df_publication.sort_values(by='publisher')
         df_publication.sort_values(by='datePublished')
 
-        df_concept_par_date = getConcept_par_date()
+        # recupere toutes les dates par mois des publications
         df_all_date = getDf_All_publication_date_par_mois()
 
     tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
@@ -453,13 +424,12 @@ elif selected == pages['page_2']['name']:
     tab3_2.dataframe(df_publication)
 
     tab4_1, tab4_2 = st.tabs(["📈 Graphique", "🗃 Données"])
-    selected_date = tab4_1.selectbox("Select a date", df_all_date)
+    selected_date = tab4_1.selectbox("Selectionner une période", df_all_date)
     filtered_df = get_filtered_data(selected_date)
-    tab4_1.dataframe(filtered_df)
-    # tab4_1.plotly_chart(
-    # px.pie(filtered_df, values='count',names='concept', title='concept par date'))
-    tab4_2.write("Tableau des concept par date ")
-    tab4_2.dataframe(df_concept_par_date)
+    tab4_1.plotly_chart(px.pie(filtered_df, values='count', names='concept', title=f'Les 20 concept les plus utilisé '
+                                                                                   f'du mois {selected_date}'))
+    tab4_2.write(f"Tableau des concept par date pour le mois {selected_date}")
+    tab4_2.dataframe(filtered_df)
 
 # ---------- CORPUS ---------------
 elif selected == pages['page_3']['name']:

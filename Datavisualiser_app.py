@@ -150,13 +150,12 @@ def getDf_publication_Search(search):
 
 # Récupère toutes les publications du mois courant trié par score altemetric et citation
 @st.cache_data(show_spinner=False)
-def getDf_publication_altmetric():
-    current_date = datetime.now().strftime("%Y-%m")
+def getDf_publication_altmetric(date):
     return pd.DataFrame(list(collection_Publication.find({
         "$expr": {
             "$eq": [
                 {"$dateToString": {"format": "%Y-%m", "date": "$datePublished"}},
-                current_date
+                date
             ]
         }
     }).sort([("altmetric", -1), ("timesCited", -1)])))
@@ -175,8 +174,21 @@ def getDf_All_publication_date_par_mois():
          {'$sort':
               {'_id': -1}}])))
 
+# Récupere toutes les dates des publications par mois
+@st.cache_data(show_spinner=False)
+def getDf_All_essai_date():
+    return pd.DataFrame(list(collection_Essai.aggregate(
+        [{'$project':
+              {'_id': 0, 'dateInserted':
+                  {'$dateToString':
+                       {'format': '%Y', 'date': '$dateInserted'}}}},
+         {'$group':
+              {'_id': '$dateInserted'}},
+         {'$sort':
+              {'_id': -1}}])))
 
-# Récupère les essai qui ont pour intervention un arm_group_labels contenant le mot Drug
+
+# Récupère les essai qui ont pour intervention un type contenant le mot Drug
 @st.cache_data(show_spinner=False)
 def getDf_essai_drug():
     return pd.DataFrame(
@@ -241,6 +253,46 @@ def get_filtered_data(date):
             {"$limit": 20}
         ])))
 
+
+# Récupère la liste des types d'interventions
+def getDf_essai_type_group():
+    return pd.DataFrame(list(collection_Essai.aggregate([{"$unwind": "$interventions"},
+                                                         {"$group": {"_id": "$interventions.arm_group_labels",
+                                                                     "nb": {"$sum": 1}}},
+                                                         {"$sort": {"nb": -1}},
+                                                         {"$limit": 20}])))
+
+def getDf_publication_par_annee(date = "2020"):
+    return pd.DataFrame(list(collection_Publication.aggregate([{"$match": {
+                "$expr": {
+                    "$eq": [
+                        {
+                            "$dateToString": {
+                                "format": "%Y",
+                                "date": "$datePublished"
+                            }
+                        },
+                        f"{(date)}"
+                    ]
+                }
+            }},{"$group":
+                        {"_id":"$venue","nb":{"$sum":1}}},
+        {"$sort":{"nb":-1}},
+        {"$limit":20}])))
+def getDf_essai_année(date = "2020"):
+    return pd.DataFrame(list(collection_Essai.aggregate([{"$match": {
+                "$expr": {
+                    "$eq": [
+                        {
+                            "$dateToString": {
+                                "format": "%Y",
+                                "date": "$dateInserted"
+                            }
+                        },
+                        f"{(date)}"
+                    ]
+                }
+            }}])))
 
 # Insérer une liste d'objets dans la BD
 def insert_objects_to_mongoDB(liste_objets, collection):
@@ -411,6 +463,11 @@ elif selected == pages['page_2']['name']:
         # Récupère toutes les dates par mois des publications
         df_all_date = getDf_All_publication_date_par_mois()
 
+        df_essai_type_group = getDf_essai_type_group()
+
+        df_all_date_annee = df_all_date['_id'].str[:4]
+        df_all_date_annee.drop_duplicates(inplace=True)
+
     tab1_1, tab1_2 = st.tabs(["📈 Graphique", "🗃 Données"])
     tab1_1.plotly_chart(
         px.histogram(df_essai, x="Date d'insertion", color="registry", title="Nombre d'essais par jour"))
@@ -437,6 +494,19 @@ elif selected == pages['page_2']['name']:
     tab4_2.write(f"Tableau des concept par date pour le mois {selected_date}")
     tab4_2.dataframe(filtered_df)
 
+    tab5_1, tab5_2 = st.tabs(["📈 Graphique", "🗃 Données"])
+    tab5_1.plotly_chart(px.pie(df_essai_type_group, values='nb', names='_id', title='Nombre d\'essai par type'))
+    tab5_2.dataframe(df_essai_type_group)
+
+    tab6_1, tab6_2 = st.tabs(["📈 Graphique", "🗃 Données"])
+    selected_date_annee = tab6_1.selectbox("Sélectionner une période", df_all_date_annee)
+    filtered_df = get_filtered_data(selected_date_annee)
+    df_venue_par_annee = getDf_publication_par_annee(selected_date_annee)
+    tab6_1.plotly_chart(px.bar(df_venue_par_annee, y='nb', x='_id', title=f'Les 20 venue les plus utilisé '))
+    tab6_2.write(f"Tableau des venue par date pour l'année {selected_date}")
+    tab6_2.dataframe(df_venue_par_annee)
+
+
 # ---------- CORPUS ---------------
 elif selected == pages['page_3']['name']:
     st.title(selected)
@@ -460,10 +530,9 @@ elif selected == pages['page_3']['name']:
 
         df_conditions = getDf_essai_Conditions()
 
-        df_altemetric = getDf_publication_altmetric()
-        nb_altemetric = len(df_altemetric)
-
         df_essai_drug = getDf_essai_drug()
+
+        df_all_date = getDf_All_publication_date_par_mois()
 
     st.header("Essai : " + str(nb_essai))
     gender_selection = st.multiselect("Choisir un genre", gender, default=gender)
@@ -499,9 +568,16 @@ elif selected == pages['page_3']['name']:
     st.header("Drug (essai): " + str(len(df_essai_drug)))
     st.dataframe(df_essai_drug)
 
-    st.header(
-        "Publication du mois " + datetime.now().strftime("%m-%Y") + " (publication): " + str(nb_altemetric))
-    st.dataframe(df_altemetric)
+    st.header("Publication du mois ")
+    date = st.selectbox("Sélectionner une période", df_all_date)
+    st.metric("Nombre de résultat", str(len(getDf_publication_altmetric(date))))
+    st.dataframe(getDf_publication_altmetric(date))
+
+    st.header("Essai : " + str(len(df_essai)))
+    df_date_essai = getDf_All_essai_date()
+    selected_date = st.selectbox("Sélectionner une période", df_date_essai)
+    filtered_df = getDf_essai_année(selected_date)
+    st.dataframe(filtered_df)
 
     st.header("Top " + str(len(df_concept)) + " Concept")
     st.dataframe(df_concept)

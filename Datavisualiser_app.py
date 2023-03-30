@@ -130,11 +130,11 @@ def getDf_Nbabstract():
 
 # Recherche dans les essais du mot Ivermectin
 @st.cache_data(show_spinner=False)
-def getDf_essai_ivermectin():
+def getDf_essai_Search(search):
     df = pd.DataFrame(list(collection_Essai.find({"$or": [
-        {"interventions.name": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
-        {"interventions.arm_group_labels": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
-        {"interventions.description": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]},
+        {"interventions.name": {"$regex": f".*{search}.*", "$options": "i"}},
+        {"interventions.arm_group_labels": {"$regex": f".*{search}.*", "$options": "i"}},
+        {"interventions.description": {"$regex": f".*{search}.*", "$options": "i"}}]},
         {"interventions": 0})))
     return df
 
@@ -460,10 +460,7 @@ elif selected == pages['page_3']['name']:
 
         df_conditions = getDf_essai_Conditions()
 
-        df_essaie_ivermectin = getDf_essai_ivermectin()
         df_publication_ivermectin = getDf_publication_ivermectin()
-
-        nb_essaie_ivermectin = len(df_essaie_ivermectin)
         nb_pub_ivermectin = len(df_publication_ivermectin)
 
         df_altemetric = getDf_publication_altmetric()
@@ -490,8 +487,11 @@ elif selected == pages['page_3']['name']:
     st.header("Publication : " + str(nb_pub))
     st.dataframe(df_pub)
 
-    st.header("Ivermectin (essai): " + str(nb_essaie_ivermectin))
-    st.dataframe(df_essaie_ivermectin)
+    st.header("Recharche essai par Intervention")
+    search = st.text_input("Recherche par intervention", value="Ivermectin")
+    df_essai_filtre_search = getDf_essai_Search(search)
+    st.metric("Nombre de résultat", str(len(df_essai_filtre_search)))
+    st.dataframe(df_essai_filtre_search)
 
     st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
     st.dataframe(df_publication_ivermectin)

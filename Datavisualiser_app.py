@@ -141,10 +141,10 @@ def getDf_essai_Search(search):
 
 # Recherche dans les publications du mot Ivermectin
 @st.cache_data(show_spinner=False)
-def getDf_publication_ivermectin():
+def getDf_publication_Search(search):
     df = pd.DataFrame(list(collection_Publication.find({"$or": [
-        {"concept": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}},
-        {"title": {"$regex": f".*{'ivermectin'}.*", "$options": "i"}}]})))
+        {"concept": {"$regex": f".*{search}.*", "$options": "i"}},
+        {"title": {"$regex": f".*{search}.*", "$options": "i"}}]})))
     return df
 
 
@@ -460,9 +460,6 @@ elif selected == pages['page_3']['name']:
 
         df_conditions = getDf_essai_Conditions()
 
-        df_publication_ivermectin = getDf_publication_ivermectin()
-        nb_pub_ivermectin = len(df_publication_ivermectin)
-
         df_altemetric = getDf_publication_altmetric()
         nb_altemetric = len(df_altemetric)
 
@@ -493,8 +490,11 @@ elif selected == pages['page_3']['name']:
     st.metric("Nombre de résultat", str(len(df_essai_filtre_search)))
     st.dataframe(df_essai_filtre_search)
 
-    st.header("Ivermectin (publication): " + str(nb_pub_ivermectin))
-    st.dataframe(df_publication_ivermectin)
+    st.header("Recherche de publication")
+    search = st.text_input("Recherche", value="Ivermectin")
+    df_publication_filtre_search = getDf_publication_Search(search)
+    st.metric("Nombre de résultat", str(len(df_publication_filtre_search)))
+    st.dataframe(df_publication_filtre_search)
 
     st.header("Drug (essai): " + str(len(df_essai_drug)))
     st.dataframe(df_essai_drug)

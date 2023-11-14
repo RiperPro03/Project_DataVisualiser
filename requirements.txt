@@ -4,6 +4,6 @@ pymongo==4.3.3
 openpyxl==3.1.2
 plotly==5.14.0
 streamlit_option_menu~=0.3.2
-requests~=2.28.2
+requests~=2.31.0
 PyPDF2~=3.0.1
 selenium~=4.8.2
